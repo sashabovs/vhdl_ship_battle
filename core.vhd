@@ -1,6 +1,9 @@
 library work;
 use work.DataStructures.Coordinates;
 use work.DataStructures.resArray;
+use work.DataStructures.ShipType;
+use work.DataStructures.ShipObject;
+use work.DataStructures.ShipArray;
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -20,7 +23,8 @@ entity core is
 
 		-- output
 		cannon_1_pos_out : out Coordinates;
-		shells_1_out : out resArray
+		shells_1_out : out resArray;
+		ships_1_out: out ShipArray
 	);
 end core;
 
@@ -69,16 +73,38 @@ architecture a1 of core is
 		);
 	end component;
 
+	component ships is
+		generic (
+			--depth of fifo
+			size : integer := 10;
+			update_period_in_clk : integer := 20;
+			screen_h : integer
+		);
+		port (
+			-- input
+			clk : in std_logic;
+			reset : in std_logic;
+	
+			ship_to_delete : in integer;
+			
+	
+			-- output
+			ships_all : out ShipArray
+		);
+	end component;
+
+
 	--signal cannon_1_pos_inner : Coordinates;
 	signal cannon_1_fire_inner : std_logic := '0';
-	signal pop : std_logic := '0';
+	signal shells_1_remove_top : std_logic := '0';
 
 	signal cannon_1_pos_inner : Coordinates;
 	signal reset_inner : std_logic := '0';
 	signal fifo_empty_inner : std_logic;
 	signal fifo_full_inner : std_logic;
 	signal data_out_inner : Coordinates;
-	signal data_top_inner : Coordinates;
+	signal shells_1_top_inner : Coordinates;
+
 begin
 	cannon_1 : cannon
 	generic map(
@@ -103,20 +129,19 @@ begin
 	generic map(
 		depth => 10,
 		update_period_in_clk => 50 * game_speed
-
 	)
 	port map(
 		-- input
 		clk => clk,
 
 		reset => reset_inner,
-		pop_enabled => pop, --enable read,should be '0' when not in use.
+		pop_enabled => shells_1_remove_top, --enable read,should be '0' when not in use.
 		push_enabled => cannon_1_fire_inner, --enable write,should be '0' when not in use.
 		data_in => cannon_1_pos_inner, --input data
 
 		-- output
 		data_out => data_out_inner, --output data
-		data_top => data_top_inner,
+		data_top => shells_1_top_inner,
 
 		fifo_empty => fifo_empty_inner, --set as '1' when the queue is empty
 		fifo_full => fifo_full_inner,
@@ -124,9 +149,26 @@ begin
 		data_all => shells_1_out
 	);
 
+	ships_1 : ships
+	generic map(
+		size => 10,
+		update_period_in_clk => 50 * game_speed,
+		screen_h => screen_h
+	)
+	port map(
+		-- input
+		clk => clk,
+		reset => reset_inner,
+		ship_to_delete => 999999,
+
+		-- output
+		ships_all => ships_1_out
+	);
+
+
 	process (clk)
 		variable firePos : Coordinates;
-		variable ticks_before_next_fire : integer := 100_000 * game_speed;
+		variable ticks_before_next_fire : integer := 10_000 * game_speed;
 		variable ticks_from_last_fire : integer := ticks_before_next_fire;
 	begin
 		if (rising_edge(clk)) then
@@ -135,15 +177,26 @@ begin
 			end if;
 
 			cannon_1_fire_inner <= '0';
-			pop <= '0';
 
 			if (cannon_1_fire = '1' and ticks_from_last_fire = ticks_before_next_fire) then
 				ticks_from_last_fire := 0;
 
 				cannon_1_fire_inner <= '1';
-				pop <= '0';
+				
 			end if;
 		end if;
 	end process;
+
+	process (clk)
+	begin
+		if (rising_edge(clk)) then
+			if (shells_1_top_inner.x > (screen_w - 10)) then
+				shells_1_remove_top <= '1';
+			else
+				shells_1_remove_top <= '0';
+			end if;
+		end if;
+	end process;
+
 	cannon_1_pos_out <= cannon_1_pos_inner;
 end a1;

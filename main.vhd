@@ -1,6 +1,9 @@
 library work;
 use work.DataStructures.resArray;
 use work.DataStructures.Coordinates;
+use work.DataStructures.ShipType;
+use work.DataStructures.ShipObject;
+use work.DataStructures.ShipArray;
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -53,6 +56,7 @@ architecture a1 of main is
 
 	signal cannon_pos_1_inner : Coordinates;
 	signal shells_1_inner : resArray;
+	signal ships_1_inner : ShipArray;
 
 	signal cannon_pos_2_inner : Coordinates;
 
@@ -112,6 +116,7 @@ architecture a1 of main is
 	
 			cannon_1_pos : in Coordinates;
 			shells_1 : in resArray;
+			ships_1 : in ShipArray;
 
 			-- output
 			red : out std_logic_vector(7 downto 0) := (others => '0'); --red magnitude output to DAC
@@ -135,7 +140,8 @@ architecture a1 of main is
 
 		-- output
 		cannon_1_pos_out : out Coordinates;
-		shells_1_out : out resArray
+		shells_1_out : out resArray;
+		ships_1_out: out ShipArray
 		);
 	end component;
 begin
@@ -168,6 +174,7 @@ begin
 		
 		cannon_1_pos => cannon_pos_1_inner,
 		shells_1 => shells_1_inner,
+		ships_1 => ships_1_inner,
 
 		-- output
 		red => red,
@@ -188,7 +195,8 @@ begin
 	cannon_1_fire => fire_1,
 
 	cannon_1_pos_out => cannon_pos_1_inner,
-	shells_1_out => shells_1_inner
+	shells_1_out => shells_1_inner,
+	ships_1_out => ships_1_inner
 	);
 
 	-- clk_vga_c <= temp_vga_clk;

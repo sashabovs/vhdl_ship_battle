@@ -78,9 +78,11 @@ begin
 
 			if (empty = '0') then
 				data_top <= memory(readptr);
+			else
+			data_top <= (x => -1, y => -1);
 			end if;
 
-			if (push_enabled = '1') then
+			--if (push_enabled = '1') then
 				if (pop_enabled = '1' and empty = '0') then --read
 					data_out <= memory(readptr);
 					readptr <= readptr + 1;
@@ -111,7 +113,7 @@ begin
 				else
 					full <= '0';
 				end if;
-			end if;
+			--end if;
 		end if;
 	end process;
 

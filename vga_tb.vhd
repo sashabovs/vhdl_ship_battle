@@ -15,10 +15,10 @@ architecture test of vga_tb is
 	constant screen_w : integer := 100;
 	constant screen_h : integer := 100;
 
-	constant clk_vga_period : time := 5 ns;
+	constant clk_vga_period : time := 50 ns;
 	signal clk_vga : std_logic := '0';
 
-	constant clk_game_period : time := 20 ns;
+	constant clk_game_period : time := 200 ns;
 	signal clk_game : std_logic := '0';
 
 	signal reset_game : std_logic := '1';
