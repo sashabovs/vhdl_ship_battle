@@ -1,0 +1,12 @@
+*.wlf
+*.mpf
+*.bin
+transcript
+work
+*.cf
+quartus
+venv
+*.bak
+.idea
+*.mti
+*.ghw
