@@ -1,12 +1,14 @@
 library work;
 use work.DataStructures.resArray;
-use work.DataStructures.Pair;
+use work.DataStructures.Coordinates;
 
 library ieee;
 use ieee.std_logic_1164.all;
 
 entity main is
 	generic(
+		game_speed: integer := 1000;
+	
 		screen_w: integer := 100;
 		screen_h: integer := 100
 	);
@@ -17,9 +19,9 @@ entity main is
 
 		reset : in std_logic;
 
-		up : in std_logic;
-		down : in std_logic;
-		fire : in std_logic;
+		up_1 : in std_logic;
+		down_1 : in std_logic;
+		fire_1 : in std_logic;
 
 		-- output
 		red : out std_logic_vector(7 downto 0); --red magnitude output to DAC
@@ -49,8 +51,10 @@ architecture a1 of main is
 
 	-- signal ground : std_logic := '0';
 
-	-- signal temp_x : integer := 10;
-	-- signal temp_y : integer := 10;
+	signal cannon_pos_1_inner : Coordinates;
+	signal shells_1_inner : resArray;
+
+	signal cannon_pos_2_inner : Coordinates;
 
 	-- signal temp_vga_clk : std_logic;
 	signal up_inner : std_logic := '0';
@@ -59,37 +63,13 @@ architecture a1 of main is
 
 	signal enr_test : std_logic := '0';
 	signal enw_test : std_logic := '0';
-	signal data_in_test : Pair;
+	signal data_in_test : Coordinates;
 
-	signal data_out_test : Pair;
-	signal data_top_test : Pair;
+	signal data_out_test : Coordinates;
+	signal data_top_test : Coordinates;
 	signal enpt_test : std_logic := '0';
 	signal full_test : std_logic := '0';
 	signal data_all_test : resArray;
-
-	component queue is
-		generic (
-			depth : integer := 10;
-			update_period_in_clk : integer := 20
-		);
-		port (
-			-- input
-			clk : in std_logic;
-			reset : in std_logic;
-			pop_enabled : in std_logic; --enable pop,should be '0' when not in use.
-			push_enabled : in std_logic; --enable push,should be '0' when not in use.
-			data_in : in Pair;
-
-			-- output
-			data_out : out Pair;
-			data_top : out Pair;
-
-			fifo_empty : out std_logic;
-			fifo_full : out std_logic;
-
-			data_all : out resArray
-		);
-	end component;
 
 	component vga_controller is
 		generic (
@@ -129,9 +109,9 @@ architecture a1 of main is
 			disp_ena : in std_logic; --display enable ('1' = display time, '0' = blanking time)
 			row : in integer; --row pixel coordinate
 			column : in integer; --column pixel coordinate
-			-- cannon_1_x : in integer;
-			-- cannon_1_y : in integer;
-			--shells : IN resArray;
+	
+			cannon_1_pos : in Coordinates;
+			shells_1 : in resArray;
 
 			-- output
 			red : out std_logic_vector(7 downto 0) := (others => '0'); --red magnitude output to DAC
@@ -140,54 +120,28 @@ architecture a1 of main is
 		);
 	end component;
 
-	-- component cannon is
-	-- 	generic (
-	-- 		speed : integer := 10
-	-- 	);
-	-- 	port (
-	-- 		clk : in std_logic;
-	-- 		up : in std_logic;
-	-- 		down : in std_logic;
+	component core is
+		generic (	
+			game_speed: integer;
+			screen_w: integer;
+			screen_h: integer
+		);
+		port (
+		-- input
+		clk : in std_logic;
+		cannon_1_up : in std_logic;
+		cannon_1_down : in std_logic;
+		cannon_1_fire : in std_logic;
 
-	-- 		x : out integer := 0; --row pixel coordinate
-	-- 		y : out integer := 200); --column pixel coordinate
-	-- end component;
-
-	-- component core is
-
-	-- 	port (
-	-- 		clk : in std_logic;
-	-- 		fire : in std_logic;
-	-- 		cannon_1_x : in integer;
-	-- 		cannon_1_y : in integer;
-	-- 		shells : out resArray);
-
-	-- end component;
-
-	-- component altpll0 is
-	-- 	port (
-	-- 		areset : in std_logic := '0';
-	-- 		inclk0 : in std_logic := '0';
-	-- 		c0 : out std_logic
-	-- 	);
-	-- end component;
-
-
+		-- output
+		cannon_1_pos_out : out Coordinates;
+		shells_1_out : out resArray
+		);
+	end component;
 begin
 	reset_low <= reset;
 
-	up_inner <= up;
-	down_inner <= down;
-	fire_inner <= fire;
-
 	disp_ena <= disp_ena_inner;
-
-	-- altpll0_ob : altpll0 port map(
-	-- 	areset => ground,
-	-- 	inclk0 => clk,
-	-- 	c0 => temp_vga_clk
-
-	-- );
 
 	vga_controller_1 : vga_controller port map(
 		-- input
@@ -210,10 +164,10 @@ begin
 		disp_ena => disp_ena_inner,
 		row => row_inner,
 		column => column_inner,
-		-- cannon_1_x => temp_x,
-		-- cannon_1_y => temp_y,
 
-		--shells => shells_1,
+		
+		cannon_1_pos => cannon_pos_1_inner,
+		shells_1 => shells_1_inner,
 
 		-- output
 		red => red,
@@ -221,42 +175,21 @@ begin
 		blue => blue
 	);
 
-	bullet_queue : queue port map(
-		-- input
-		clk => game_clk,
+	core_1 : core
+	generic map(
+		game_speed => game_speed,
+		screen_w => screen_w,
+		screen_h => screen_h
+	)
+	port map(
+	clk	=> game_clk,
+	cannon_1_up => up_1,
+	cannon_1_down => down_1,
+	cannon_1_fire => fire_1,
 
-		reset => reset,
-		pop_enabled => enr_test, --enable read,should be '0' when not in use.
-		push_enabled => enw_test, --enable write,should be '0' when not in use.
-		data_in => data_in_test, --input data
-
-		-- output
-		data_out => data_out_test, --output data
-		data_top => data_top_test,
-
-		fifo_empty => enpt_test, --set as '1' when the queue is empty
-		fifo_full => full_test,
-
-		data_all => data_all_test
+	cannon_1_pos_out => cannon_pos_1_inner,
+	shells_1_out => shells_1_inner
 	);
-
-	--cannon_1: cannon port map(
-	-- 	clk	    => game_clk,
-	--	up	=> up,
-	--	down	=> down,
-
-	--   	x     => cannon_x_1,
-	--  	y   => cannon_y_1
-	--);
-
-	--core_1:core port map(
-	--clk	=> game_clk,
-	--fire	=> fire,
-	--	cannon_1_x => cannon_x_1,
-	--	cannon_1_y => cannon_y_1,
-	--	shells => shells_1
-
-	--);
 
 	-- clk_vga_c <= temp_vga_clk;
 

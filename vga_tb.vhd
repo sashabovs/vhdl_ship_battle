@@ -6,7 +6,7 @@ use ieee.numeric_std.all;
 
 library work;
 use work.DataStructures.resArray;
-use work.DataStructures.Pair;
+-- use work.DataStructures.Coordinates;
 
 entity vga_tb is
 end vga_tb;
@@ -41,15 +41,15 @@ architecture test of vga_tb is
 	-- signal enr_test : std_logic := '0';
 	-- signal enw_test : std_logic := '0';
 
-	-- signal data_in_test : Pair;
+	-- signal data_in_test : Coordinates;
 	-- signal data_in_test_x : integer;
 	-- signal data_in_test_y : integer;
 
-	-- signal data_out_test : Pair;
+	-- signal data_out_test : Coordinates;
 	-- signal data_out_test_x : integer;
 	-- signal data_out_test_y : integer;
 
-	-- signal data_top_test : Pair;
+	-- signal data_top_test : Coordinates;
 	-- signal data_top_test_x : integer;
 	-- signal data_top_test_y : integer;
 
@@ -66,8 +66,9 @@ architecture test of vga_tb is
 	signal stop_simulation : std_logic := '0';
 	component main is
 		generic (
-			screen_w : integer := 10;
-			screen_h : integer := 10
+			game_speed: integer;
+			screen_w : integer;
+			screen_h : integer
 		);
 		port (
 			-- input
@@ -76,9 +77,9 @@ architecture test of vga_tb is
 
 			reset : in std_logic;
 
-			up : in std_logic;
-			down : in std_logic;
-			fire : in std_logic;
+			up_1 : in std_logic;
+			down_1 : in std_logic;
+			fire_1 : in std_logic;
 
 			-- output
 			red : out std_logic_vector(7 downto 0); --red magnitude output to DAC
@@ -96,6 +97,7 @@ architecture test of vga_tb is
 begin
 	main_test : main
 	generic map(
+		game_speed => 1,
 		screen_w => screen_w,
 		screen_h => screen_h
 	)
@@ -106,9 +108,9 @@ begin
 
 		reset => reset_game,
 
-		up => up_test,
-		down => down_test,
-		fire => fire_test,
+		up_1 => up_test,
+		down_1 => down_test,
+		fire_1 => fire_test,
 
 		-- output
 		red => red_test, --red magnitude output to DAC
@@ -144,7 +146,7 @@ begin
 	-- game clock
 	process
 	begin
-		for i in 0 to 1_000_00 loop
+		for i in 0 to 1_000_000 loop
 			clk_game <= '0';
 			wait for clk_game_period/2; --for 0.5 ns signal is '0'.
 			clk_game <= '1';
@@ -167,7 +169,7 @@ begin
 	end process;
 
 	-- process (clk_game)
-	-- 	variable firePos : Pair;
+	-- 	variable firePos : Coordinates;
 	-- 	variable ticks_from_last_fire : integer := 0;
 	-- 	variable ticks_before_next_fire : integer := 5;
 	-- begin
