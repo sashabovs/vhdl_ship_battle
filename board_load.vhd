@@ -84,7 +84,7 @@ architecture a1 of board_load is
 begin
 	main_test : main
 	generic map(
-		game_speed => 1_000_0,
+		game_speed => 10_000,
 		screen_w => screen_w,
 		screen_h => screen_h
 	)

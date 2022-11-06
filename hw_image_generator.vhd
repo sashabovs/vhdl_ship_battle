@@ -41,7 +41,7 @@ begin
 				blue <= (others => '0');
 			end if;
 
-			if (row > 1910 and column > 1070) then
+			if (row > 1070 and column > 1900) then
 				red <= (others => '1');
 				green <= (others => '0');
 				blue <= (others => '0');
@@ -55,12 +55,13 @@ begin
 				end if;
 			end loop;
 
-			-- if (column > cannon_1_x - 10 and column < cannon_1_x + 10 and row > cannon_1_y - 10 and row < cannon_1_y + 10) then
+		   if (column > cannon_1_pos.x - 10 and column < cannon_1_pos.x + 10 and row > cannon_1_pos.y - 10 and row < cannon_1_pos.y + 10) then
 
-			--   red <= (others => '0');
-			--   green <= (others => '1');
-			--   blue <= (others => '0');
-			-- end if;
+			   red <= (others => '0');
+			   green <= (others => '1');
+			   blue <= (others => '0');
+			end if;
+			
 
 		else --blanking time
 			red <= (others => '0');
