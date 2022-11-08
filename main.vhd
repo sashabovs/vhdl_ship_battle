@@ -75,6 +75,9 @@ architecture a1 of main is
 	signal full_test : std_logic := '0';
 	signal data_all_test : resArray;
 
+	signal first_border_coord_inner : Coordinates;
+	signal second_border_coord_inner : Coordinates;
+
 	component vga_controller is
 		generic (
 			h_pulse : integer := 44; --horiztonal sync pulse width in pixels
@@ -106,13 +109,17 @@ architecture a1 of main is
 
 	component hw_image_generator is
 		generic (
-			pixels_y : integer := 5; --row that first color will persist until
-			pixels_x : integer := 5); --column that first color will persist until
+			screen_w : integer; 
+			screen_h : integer
+		);
 		port (
 			-- input
 			disp_ena : in std_logic; --display enable ('1' = display time, '0' = blanking time)
 			row : in integer; --row pixel coordinate
 			column : in integer; --column pixel coordinate
+
+			first_border_coord : in Coordinates;
+			second_border_coord : in Coordinates;
 
 			cannon_1_pos : in Coordinates;
 			shells_1 : in resArray;
@@ -141,7 +148,10 @@ architecture a1 of main is
 		-- output
 		cannon_1_pos_out : out Coordinates;
 		shells_1_out : out resArray;
-		ships_1_out: out ShipArray
+		ships_1_out: out ShipArray;
+
+		first_border_coord : out Coordinates;
+		second_border_coord : out Coordinates
 		);
 	end component;
 begin
@@ -165,11 +175,19 @@ begin
 		v_sync => v_sync
 	);
 
-	hw_image_generator_1 : hw_image_generator port map(
+	hw_image_generator_1 : hw_image_generator 
+	generic map(
+		screen_w => screen_w,
+		screen_h => screen_h
+	)
+	port map(
 		-- input
 		disp_ena => disp_ena_inner,
 		row => row_inner,
 		column => column_inner,
+
+		first_border_coord => first_border_coord_inner,
+		second_border_coord => second_border_coord_inner,
 
 		
 		cannon_1_pos => cannon_pos_1_inner,
@@ -196,7 +214,10 @@ begin
 
 	cannon_1_pos_out => cannon_pos_1_inner,
 	shells_1_out => shells_1_inner,
-	ships_1_out => ships_1_inner
+	ships_1_out => ships_1_inner,
+
+	first_border_coord => first_border_coord_inner,
+	second_border_coord => second_border_coord_inner
 	);
 
 	-- clk_vga_c <= temp_vga_clk;

@@ -12,7 +12,7 @@ entity vga_tb is
 end vga_tb;
 
 architecture test of vga_tb is
-	constant screen_w : integer := 100;
+	constant screen_w : integer := 500;
 	constant screen_h : integer := 100;
 
 	constant clk_vga_period : time := 5 ns;
@@ -146,7 +146,7 @@ begin
 	-- game clock
 	process
 	begin
-		for i in 0 to 100_000 loop
+	for i in 0 to 100_000 loop
 			clk_game <= '0';
 			wait for clk_game_period/2; --for 0.5 ns signal is '0'.
 			clk_game <= '1';

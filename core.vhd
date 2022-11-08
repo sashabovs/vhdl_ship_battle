@@ -24,7 +24,10 @@ entity core is
 		-- output
 		cannon_1_pos_out : out Coordinates;
 		shells_1_out : out resArray;
-		ships_1_out : out ShipArray
+		ships_1_out : out ShipArray;
+
+		first_border_coord : out Coordinates;
+		second_border_coord : out Coordinates
 	);
 end core;
 
@@ -35,8 +38,8 @@ architecture a1 of core is
 			start_pos_x : integer;
 			start_pos_y : integer;
 
-			screen_w : integer;
-			screen_h : integer
+			screen_top : integer;
+			screen_bottom : integer
 		);
 		port (
 			-- input
@@ -95,25 +98,26 @@ architecture a1 of core is
 	signal cannon_1_fire_inner : std_logic := '0';
 	signal shells_1_remove_top : std_logic := '0';
 
+	signal first_border_coord_inner : Coordinates := (x => screen_w/20, y => screen_h/12);
+	signal second_border_coord_inner : Coordinates := (x => screen_w/20 * 19, y => screen_h/12 * 11);
+
 	signal cannon_1_pos_inner : Coordinates := (x => 0, y => 0);
 	signal reset_inner : std_logic := '0';
 	signal fifo_empty_inner : std_logic;
 	signal fifo_full_inner : std_logic;
 	signal data_out_inner : Coordinates;
 	signal shells_1_top_inner : Coordinates;
-	signal ships_1_inner : ShipArray := (others =>(pos1 => (x => -100, y => -100), ship_type => (color => "000000000000001111111111", value => - 2)));
+	signal ships_1_inner : ShipArray := (others => (pos1 => (x => - 100, y => - 100), ship_type => (color => "000000000000001111111111", value => - 2)));
 
 begin
-
-
 
 	cannon_1 : cannon
 	generic map(
 		speed => 100 * game_speed,
-		start_pos_x => 0,
-		start_pos_y => screen_h/2,
-		screen_w => screen_w,
-		screen_h => screen_h
+		start_pos_x => first_border_coord_inner.x,
+		start_pos_y => (first_border_coord_inner.y + second_border_coord_inner.y)/2,
+		screen_top => first_border_coord_inner.y,
+		screen_bottom => second_border_coord_inner.y
 
 	)
 	port map(
@@ -188,23 +192,30 @@ begin
 	end process;
 
 	process (clk)
+		variable ticks : integer := 0;
 	begin
 		if (rising_edge(clk)) then
-			if (shells_1_top_inner.x > (screen_w - 10)) then
-				shells_1_remove_top <= '1';
-			else
-				shells_1_remove_top <= '0';
-			end if;
+			ticks := ticks + 1;
+			shells_1_remove_top <= '0';
 
-			for i in 0 to 9 loop
-				if (shells_1_top_inner.x < (ships_1_inner(i).pos1.x + 5) and shells_1_top_inner.x > (ships_1_inner(i).pos1.x - 5) and shells_1_top_inner.y < (ships_1_inner(i).pos1.y + 5) and shells_1_top_inner.y > (ships_1_inner(i).pos1.y - 5)) then
+			-- we need a delay because the Shell queue changes state not immideatly, but after 3 cycles
+			if (ticks = 5) then
+				ticks := 0;
+				if (shells_1_top_inner.x > (screen_w - 10)) then
 					shells_1_remove_top <= '1';
 				end if;
-			end loop;
-			
+
+				for i in 0 to 9 loop
+					if (shells_1_top_inner.x < (ships_1_inner(i).pos1.x + 5) and shells_1_top_inner.x > (ships_1_inner(i).pos1.x - 5) and shells_1_top_inner.y < (ships_1_inner(i).pos1.y + 5) and shells_1_top_inner.y > (ships_1_inner(i).pos1.y - 5)) then
+						shells_1_remove_top <= '1';
+					end if;
+				end loop;
+			end if;
 
 		end if;
 	end process;
+	first_border_coord <= first_border_coord_inner;
+	second_border_coord <= second_border_coord_inner;
 
 	cannon_1_pos_out <= cannon_1_pos_inner;
 	ships_1_out <= ships_1_inner;

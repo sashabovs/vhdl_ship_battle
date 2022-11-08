@@ -12,13 +12,16 @@ use ieee.numeric_std.all;
 
 entity hw_image_generator is
 	generic (
-		pixels_y : integer := 5; --row that first color will persist until
-		pixels_x : integer := 5 --column that first color will persist until
+		screen_w : integer := 5; 
+		screen_h : integer := 5 
 	);
 	port (
 		disp_ena : in std_logic; --display enable ('1' = display time, '0' = blanking time)
 		row : in integer; --row pixel coordinate
 		column : in integer; --column pixel coordinate
+
+		first_border_coord : in Coordinates;
+		second_border_coord : in Coordinates;
 
 		cannon_1_pos : in Coordinates;
 		shells_1 : in resArray;
@@ -34,7 +37,7 @@ begin
 	process (disp_ena, row, column)
 	begin
 		if (disp_ena = '1') then --display time
-			if (row < pixels_y and column < pixels_x) then
+			if (row > first_border_coord.y and column > first_border_coord.x and row < second_border_coord.y and column < second_border_coord.x) then
 				red <= (others => '0');
 				green <= (others => '0');
 				blue <= (others => '1');
@@ -44,11 +47,6 @@ begin
 				blue <= (others => '0');
 			end if;
 
-			if (row > 1070 and column > 1900) then
-				red <= (others => '1');
-				green <= (others => '0');
-				blue <= (others => '0');
-			end if;
 
 			-- shells 1
 			for i in 0 to 9 loop

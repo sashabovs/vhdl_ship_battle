@@ -11,8 +11,8 @@ entity cannon is
 		start_pos_x : integer := 0;
 		start_pos_y : integer := 0;
 
-		screen_w: integer := 100;
-		screen_h: integer := 100
+		screen_top: integer := 100;
+		screen_bottom: integer := 100
 	);
 	port (
 		-- input
@@ -26,22 +26,25 @@ entity cannon is
 end cannon;
 
 architecture a1 of cannon is
-	signal coords : Coordinates := (x => start_pos_x, y => start_pos_y);
+	signal coords : Coordinates := (x => start_pos_x, y => start_pos_y); 
 begin
 	coords_out <= coords;
 
 	process (clk)
 		variable ticks : integer := 0;
+
+		variable cannon_width : integer := 10;
+		variable cannon_height : integer := 10;
 	begin
 		if (rising_edge(clk)) then
 			ticks := ticks + 1;
 			if (ticks = speed) then
 				ticks := 0;
-				if (up = '1' and down = '0' and coords.y < screen_h) then
+				if (up = '1' and down = '0' and coords.y < screen_bottom - cannon_height/2) then
 					coords.y <= coords.y + 1;
 				end if;
 
-				if (down = '1' and up = '0' and coords.y > 0) then
+				if (down = '1' and up = '0' and coords.y > screen_top + cannon_height/2) then
 					coords.y <= coords.y - 1;
 				end if;
 			end if;
