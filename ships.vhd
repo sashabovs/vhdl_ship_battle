@@ -15,6 +15,7 @@ entity ships is
 		--depth of fifo
 		size : integer := 10;
 		update_period_in_clk : integer := 20;
+		screen_w : integer;
 		screen_h : integer
 	);
 	port (
@@ -38,7 +39,7 @@ architecture a1 of ships is
 		);
 	end component;
 
-	signal ships_all_inner : ShipArray;
+	
 
 	constant destroyer : ShipType := (
 		color => "011111000000000000011111",
@@ -53,6 +54,7 @@ architecture a1 of ships is
 		value => - 2
 	);
 
+	signal ships_all_inner : ShipArray := (others =>(pos1 => (x => -100, y => -100), ship_type => destroyer));
 	signal random_num : std_logic_vector (14 downto 0);
 
 begin
@@ -65,9 +67,6 @@ begin
 
 	ships_all <= ships_all_inner;
 
-	-- for i in 0 to 3 loop
-	-- 	ships(i) <= (pos <= (x <= 0, y <= 0), ship_type <= destroyer);
-	-- end loop;
 
 	-- for i in 4 to 6 loop
 	-- 	ships(i) <= (pos <= (x <= 0, y <= 0), ship_type <= battleShip);
@@ -98,7 +97,7 @@ begin
 
 				ship_y := screen_h * to_integer(unsigned(random_num))/(2 ** 15 - 1);
 				-- ship := (pos1 => (x => 0, y => ship_y), ship_type => ship_type);
-				ships_all_inner(init_i) <= (pos1 => (x => 0, y => ship_y), ship_type => ship_type);
+				ships_all_inner(init_i) <= (pos1 => (x => (screen_w/10)*9, y => ship_y), ship_type => ship_type);
 				init_i := init_i + 1;
 			else
 				ticks := ticks + 1;

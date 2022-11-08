@@ -24,7 +24,7 @@ entity core is
 		-- output
 		cannon_1_pos_out : out Coordinates;
 		shells_1_out : out resArray;
-		ships_1_out: out ShipArray
+		ships_1_out : out ShipArray
 	);
 end core;
 
@@ -78,34 +78,35 @@ architecture a1 of core is
 			--depth of fifo
 			size : integer := 10;
 			update_period_in_clk : integer := 20;
+			screen_w : integer;
 			screen_h : integer
 		);
 		port (
 			-- input
 			clk : in std_logic;
 			reset : in std_logic;
-	
+
 			ship_to_delete : in integer;
-			
-	
 			-- output
 			ships_all : out ShipArray
 		);
 	end component;
-
-
 	--signal cannon_1_pos_inner : Coordinates;
 	signal cannon_1_fire_inner : std_logic := '0';
 	signal shells_1_remove_top : std_logic := '0';
 
-	signal cannon_1_pos_inner : Coordinates;
+	signal cannon_1_pos_inner : Coordinates := (x => 0, y => 0);
 	signal reset_inner : std_logic := '0';
 	signal fifo_empty_inner : std_logic;
 	signal fifo_full_inner : std_logic;
 	signal data_out_inner : Coordinates;
 	signal shells_1_top_inner : Coordinates;
+	signal ships_1_inner : ShipArray := (others =>(pos1 => (x => -100, y => -100), ship_type => (color => "000000000000001111111111", value => - 2)));
 
 begin
+
+
+
 	cannon_1 : cannon
 	generic map(
 		speed => 100 * game_speed,
@@ -153,6 +154,7 @@ begin
 	generic map(
 		size => 10,
 		update_period_in_clk => 50 * game_speed,
+		screen_w => screen_w,
 		screen_h => screen_h
 	)
 	port map(
@@ -162,10 +164,8 @@ begin
 		ship_to_delete => 999999,
 
 		-- output
-		ships_all => ships_1_out
+		ships_all => ships_1_inner
 	);
-
-
 	process (clk)
 		variable firePos : Coordinates;
 		variable ticks_before_next_fire : integer := 10_000 * game_speed;
@@ -182,7 +182,7 @@ begin
 				ticks_from_last_fire := 0;
 
 				cannon_1_fire_inner <= '1';
-				
+
 			end if;
 		end if;
 	end process;
@@ -195,8 +195,17 @@ begin
 			else
 				shells_1_remove_top <= '0';
 			end if;
+
+			for i in 0 to 9 loop
+				if (shells_1_top_inner.x < (ships_1_inner(i).pos1.x + 5) and shells_1_top_inner.x > (ships_1_inner(i).pos1.x - 5) and shells_1_top_inner.y < (ships_1_inner(i).pos1.y + 5) and shells_1_top_inner.y > (ships_1_inner(i).pos1.y - 5)) then
+					shells_1_remove_top <= '1';
+				end if;
+			end loop;
+			
+
 		end if;
 	end process;
 
 	cannon_1_pos_out <= cannon_1_pos_inner;
+	ships_1_out <= ships_1_inner;
 end a1;

@@ -113,7 +113,7 @@ architecture a1 of main is
 			disp_ena : in std_logic; --display enable ('1' = display time, '0' = blanking time)
 			row : in integer; --row pixel coordinate
 			column : in integer; --column pixel coordinate
-	
+
 			cannon_1_pos : in Coordinates;
 			shells_1 : in resArray;
 			ships_1 : in ShipArray;
@@ -166,7 +166,7 @@ begin
 	);
 
 	hw_image_generator_1 : hw_image_generator port map(
-		-- input	
+		-- input
 		disp_ena => disp_ena_inner,
 		row => row_inner,
 		column => column_inner,
