@@ -7,7 +7,13 @@ package DataStructures is
 		y : integer;
 	end record;
 
-	type resArray is array(0 to 9) of Coordinates;
+	type ShellObject is record
+		cord : Coordinates;
+		enabled : std_logic;
+	end record;
+
+
+	type ArrayOfShells is array(0 to 9) of ShellObject;
 
 	type ShipType is record
 		color : std_logic_vector (23 downto 0);

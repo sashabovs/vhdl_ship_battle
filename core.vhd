@@ -1,6 +1,6 @@
 library work;
 use work.DataStructures.Coordinates;
-use work.DataStructures.resArray;
+use work.DataStructures.ArrayOfShells;
 use work.DataStructures.ShipType;
 use work.DataStructures.ShipObject;
 use work.DataStructures.ShipArray;
@@ -23,8 +23,10 @@ entity core is
 
 		-- output
 		cannon_1_pos_out : out Coordinates;
-		shells_1_out : out resArray;
+		shells_1_out : out ArrayOfShells;
 		ships_1_out : out ShipArray;
+
+		score_1 : out integer;
 
 		first_border_coord : out Coordinates;
 		second_border_coord : out Coordinates
@@ -72,7 +74,7 @@ architecture a1 of core is
 			fifo_empty : out std_logic; --set as '1' when the queue is empty
 			fifo_full : out std_logic; --set as '1' when the queue is full
 
-			data_all : out resArray
+			data_all : out ArrayOfShells
 		);
 	end component;
 
@@ -108,6 +110,9 @@ architecture a1 of core is
 	signal data_out_inner : Coordinates;
 	signal shells_1_top_inner : Coordinates;
 	signal ships_1_inner : ShipArray := (others => (pos1 => (x => - 100, y => - 100), ship_type => (color => "000000000000001111111111", value => - 2)));
+	signal ship_to_delete_1_inner : integer := 9999;
+
+	signal score_1_inner : integer := 0;
 
 begin
 
@@ -165,7 +170,7 @@ begin
 		-- input
 		clk => clk,
 		reset => reset_inner,
-		ship_to_delete => 999999,
+		ship_to_delete => ship_to_delete_1_inner,
 
 		-- output
 		ships_all => ships_1_inner
@@ -197,6 +202,7 @@ begin
 		if (rising_edge(clk)) then
 			ticks := ticks + 1;
 			shells_1_remove_top <= '0';
+			ship_to_delete_1_inner <= 9999;
 
 			-- we need a delay because the Shell queue changes state not immideatly, but after 3 cycles
 			if (ticks = 5) then
@@ -208,6 +214,8 @@ begin
 				for i in 0 to 9 loop
 					if (shells_1_top_inner.x < (ships_1_inner(i).pos1.x + 5) and shells_1_top_inner.x > (ships_1_inner(i).pos1.x - 5) and shells_1_top_inner.y < (ships_1_inner(i).pos1.y + 5) and shells_1_top_inner.y > (ships_1_inner(i).pos1.y - 5)) then
 						shells_1_remove_top <= '1';
+						ship_to_delete_1_inner <= i;
+						score_1_inner <= score_1_inner + ships_1_inner(i).ship_type.value;
 					end if;
 				end loop;
 			end if;
@@ -219,4 +227,5 @@ begin
 
 	cannon_1_pos_out <= cannon_1_pos_inner;
 	ships_1_out <= ships_1_inner;
+	score_1 <= score_1_inner;
 end a1;

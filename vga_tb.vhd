@@ -5,7 +5,7 @@ use ieee.std_logic_textio.all;
 use ieee.numeric_std.all;
 
 library work;
-use work.DataStructures.resArray;
+
 -- use work.DataStructures.Coordinates;
 
 entity vga_tb is

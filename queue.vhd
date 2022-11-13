@@ -1,5 +1,5 @@
 library work;
-use work.DataStructures.resArray;
+use work.DataStructures.ArrayOfShells;
 use work.DataStructures.Coordinates;
 
 library IEEE;
@@ -27,14 +27,14 @@ entity queue is
 		fifo_empty : out std_logic; --set as '1' when the queue is empty
 		fifo_full : out std_logic; --set as '1' when the queue is full
 
-		data_all : out resArray
+		data_all : out ArrayOfShells
 	);
 end queue;
 
 architecture a1 of queue is
 	--constant Coordinates_INIT : Coordinates := (x := 0, y := 0);
 
-	signal memory : resArray; --memory for queue.
+	signal memory : ArrayOfShells; --memory for queue.
 	signal readptr, writeptr : integer := 0; --read and write pointers.
 
 	signal empty : std_logic := '1';
@@ -63,13 +63,13 @@ begin
 				for i in 0 to depth - 1 loop
 					if (full = '1')
 						then
-						memory(i).x <= memory(i).x + 1;
+						memory(i).cord.x <= memory(i).cord.x + 1;
 					elsif (readptr < writeptr and i >= readptr and i < writeptr)
 						then
-						memory(i).x <= memory(i).x + 1;
+						memory(i).cord.x <= memory(i).cord.x + 1;
 					elsif (readptr > writeptr and (i >= readptr or i < writeptr))
 						then
-						memory(i).x <= memory(i).x + 1;
+						memory(i).cord.x <= memory(i).cord.x + 1;
 					end if;
 				end loop;
 			end if;
@@ -77,20 +77,22 @@ begin
 			---------------------------------------
 
 			if (empty = '0') then
-				data_top <= memory(readptr);
+				data_top <= memory(readptr).cord;
 			else
 			data_top <= (x => -1, y => -1);
 			end if;
 
 			--if (push_enabled = '1') then
 				if (pop_enabled = '1' and empty = '0') then --read
-					data_out <= memory(readptr);
+					data_out <= memory(readptr).cord;
+					memory(readptr).enabled <= '0';
 					readptr <= readptr + 1;
 					num_elem := num_elem - 1;
 				end if;
 
 				if (push_enabled = '1' and full = '0') then --write
-					memory(writeptr) <= data_in;
+					memory(writeptr).cord <= data_in;
+					memory(writeptr).enabled <= '1'; 
 					writeptr <= writeptr + 1;
 					num_elem := num_elem + 1;
 				end if;

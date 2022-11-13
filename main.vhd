@@ -1,5 +1,5 @@
 library work;
-use work.DataStructures.resArray;
+use work.DataStructures.ArrayOfShells;
 use work.DataStructures.Coordinates;
 use work.DataStructures.ShipType;
 use work.DataStructures.ShipObject;
@@ -55,7 +55,7 @@ architecture a1 of main is
 	-- signal ground : std_logic := '0';
 
 	signal cannon_pos_1_inner : Coordinates;
-	signal shells_1_inner : resArray;
+	signal shells_1_inner : ArrayOfShells;
 	signal ships_1_inner : ShipArray;
 
 	signal cannon_pos_2_inner : Coordinates;
@@ -73,7 +73,8 @@ architecture a1 of main is
 	signal data_top_test : Coordinates;
 	signal enpt_test : std_logic := '0';
 	signal full_test : std_logic := '0';
-	signal data_all_test : resArray;
+	
+	signal score_1_inner : integer := 0;
 
 	signal first_border_coord_inner : Coordinates;
 	signal second_border_coord_inner : Coordinates;
@@ -122,8 +123,10 @@ architecture a1 of main is
 			second_border_coord : in Coordinates;
 
 			cannon_1_pos : in Coordinates;
-			shells_1 : in resArray;
+			shells_1 : in ArrayOfShells;
 			ships_1 : in ShipArray;
+
+			score_1 : in integer;
 
 			-- output
 			red : out std_logic_vector(7 downto 0) := (others => '0'); --red magnitude output to DAC
@@ -147,8 +150,10 @@ architecture a1 of main is
 
 		-- output
 		cannon_1_pos_out : out Coordinates;
-		shells_1_out : out resArray;
+		shells_1_out : out ArrayOfShells;
 		ships_1_out: out ShipArray;
+
+		score_1 : out integer;
 
 		first_border_coord : out Coordinates;
 		second_border_coord : out Coordinates
@@ -194,6 +199,8 @@ begin
 		shells_1 => shells_1_inner,
 		ships_1 => ships_1_inner,
 
+		score_1 => score_1_inner,
+
 		-- output
 		red => red,
 		green => green,
@@ -215,6 +222,8 @@ begin
 	cannon_1_pos_out => cannon_pos_1_inner,
 	shells_1_out => shells_1_inner,
 	ships_1_out => ships_1_inner,
+
+	score_1 => score_1_inner,
 
 	first_border_coord => first_border_coord_inner,
 	second_border_coord => second_border_coord_inner
