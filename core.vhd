@@ -119,10 +119,10 @@ begin
 	cannon_1 : cannon
 	generic map(
 		speed => 100 * game_speed,
-		start_pos_x => first_border_coord_inner.x,
+		start_pos_x => (first_border_coord_inner.x + 0),
 		start_pos_y => (first_border_coord_inner.y + second_border_coord_inner.y)/2,
-		screen_top => first_border_coord_inner.y,
-		screen_bottom => second_border_coord_inner.y
+		screen_top => (first_border_coord_inner.y + 0),
+		screen_bottom => (second_border_coord_inner.y + 0)
 
 	)
 	port map(

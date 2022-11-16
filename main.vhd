@@ -4,6 +4,7 @@ use work.DataStructures.Coordinates;
 use work.DataStructures.ShipType;
 use work.DataStructures.ShipObject;
 use work.DataStructures.ShipArray;
+use work.DataStructures.GraphicMemoryType;
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -25,6 +26,12 @@ entity main is
 		up_1 : in std_logic;
 		down_1 : in std_logic;
 		fire_1 : in std_logic;
+
+		--graphic_memory : in GraphicMemoryType;
+
+		data : in std_logic_vector (7 downto 0);
+		write_address : in integer range 0 to 20_000;
+		we : in std_logic;
 
 		-- output
 		red : out std_logic_vector(7 downto 0); --red magnitude output to DAC
@@ -79,6 +86,17 @@ architecture a1 of main is
 	signal first_border_coord_inner : Coordinates;
 	signal second_border_coord_inner : Coordinates;
 
+	--signal graphic_memory_inner : GraphicMemoryType;
+
+	signal graphic_memory_read_address_inner : integer range 0 to 20_000;
+	signal graphic_memory_q_inner : std_logic_vector (31 downto 0);
+
+
+	signal ship_1_memory_begin_inner : integer := 0;
+	signal ship_1_image_width_inner : integer := 50;
+	signal ship_1_image_height_inner : integer := 100;
+	
+
 	component vga_controller is
 		generic (
 			h_pulse : integer := 44; --horiztonal sync pulse width in pixels
@@ -128,7 +146,21 @@ architecture a1 of main is
 
 			score_1 : in integer;
 
+			--graphic_memory : in GraphicMemoryType;
+
+			ship_1_memory_begin : in integer;
+			ship_1_image_width : in integer;
+			ship_1_image_height : in integer;
+
+			data : in std_logic_vector (7 downto 0);
+	 		write_address : in integer range 0 to 20_000;
+			 game_clk : in std_logic;
+			--graphic_memory_q : in std_logic_vector (31 downto 0);
+
 			-- output
+			--graphic_memory_read_address : out integer range 0 to 20_000;
+			
+
 			red : out std_logic_vector(7 downto 0) := (others => '0'); --red magnitude output to DAC
 			green : out std_logic_vector(7 downto 0) := (others => '0'); --green magnitude output to DAC
 			blue : out std_logic_vector(7 downto 0) := (others => '0') --blue magnitude output to DAC
@@ -159,6 +191,17 @@ architecture a1 of main is
 		second_border_coord : out Coordinates
 		);
 	end component;
+
+	-- component single_clock_ram is
+	-- 	port (
+	-- 		clock : in std_logic;
+	-- 		data : in std_logic_vector (7 downto 0);
+	-- 		write_address : in integer range 0 to 20_000;
+	-- 		read_address : in integer range 0 to 20_000;
+	-- 		we : in std_logic;
+	-- 		q : out std_logic_vector (31 downto 0)
+	-- 	);
+	-- end component;
 begin
 	reset_low <= reset;
 
@@ -201,7 +244,20 @@ begin
 
 		score_1 => score_1_inner,
 
+		--graphic_memory => graphic_memory,
+
+		ship_1_memory_begin => ship_1_memory_begin_inner,
+		ship_1_image_width => ship_1_image_width_inner,
+		ship_1_image_height => ship_1_image_height_inner,
+
+ 		data => data,
+ 		write_address => write_address,
+		 game_clk => game_clk,
+		--graphic_memory_q => graphic_memory_q_inner,
+
 		-- output
+		--graphic_memory_read_address => graphic_memory_read_address_inner,
+
 		red => red,
 		green => green,
 		blue => blue
@@ -228,6 +284,17 @@ begin
 	first_border_coord => first_border_coord_inner,
 	second_border_coord => second_border_coord_inner
 	);
+
+	-- memory_ram : single_clock_ram 
+	-- 	port map(
+	-- 		clock => game_clk,
+	-- 		data => data,
+	-- 		write_address => write_address,
+	-- 		read_address => graphic_memory_read_address_inner,
+	-- 		we => we,
+	-- 		q => graphic_memory_q_inner
+
+	-- 	);
 
 	-- clk_vga_c <= temp_vga_clk;
 

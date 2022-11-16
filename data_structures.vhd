@@ -26,6 +26,8 @@ package DataStructures is
 	end record;
 
 	type ShipArray is array(0 to 9) of ShipObject;
+
+	type GraphicMemoryType is array(0 to 20_000) of std_logic_vector(7 downto 0);
 end package DataStructures;
 
 
