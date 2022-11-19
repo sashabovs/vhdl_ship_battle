@@ -13,8 +13,8 @@ entity main is
 	generic(
 		game_speed: integer := 1000;
 	
-		screen_w: integer := 100;
-		screen_h: integer := 100
+		screen_w: integer;
+		screen_h: integer
 	);
 	port (
 		-- input
@@ -29,8 +29,8 @@ entity main is
 
 		--graphic_memory : in GraphicMemoryType;
 
-		data : in std_logic_vector (7 downto 0);
-		write_address : in integer range 0 to 20_000;
+		data : in std_logic_vector (15 downto 0);
+		
 		we : in std_logic;
 
 		-- output
@@ -44,7 +44,10 @@ entity main is
 		v_sync : out std_logic; --vertical sync pulse
 
 		-- for testing
-		disp_ena : out std_logic
+		disp_ena : out std_logic;
+
+		sram_addres_read	: out std_logic_vector(19 downto 0);
+		LED : out std_logic_vector(7 downto 0)
 	);
 end main;
 
@@ -88,13 +91,13 @@ architecture a1 of main is
 
 	--signal graphic_memory_inner : GraphicMemoryType;
 
-	signal graphic_memory_read_address_inner : integer range 0 to 20_000;
+	signal graphic_memory_read_address_inner : integer range 0 to 1300;
 	signal graphic_memory_q_inner : std_logic_vector (31 downto 0);
 
 
 	signal ship_1_memory_begin_inner : integer := 0;
-	signal ship_1_image_width_inner : integer := 50;
-	signal ship_1_image_height_inner : integer := 100;
+	signal ship_1_image_width_inner : integer := 20;
+	signal ship_1_image_height_inner : integer := 65;
 	
 
 	component vga_controller is
@@ -126,6 +129,8 @@ architecture a1 of main is
 		);
 	end component;
 
+
+
 	component hw_image_generator is
 		generic (
 			screen_w : integer; 
@@ -152,18 +157,21 @@ architecture a1 of main is
 			ship_1_image_width : in integer;
 			ship_1_image_height : in integer;
 
-			data : in std_logic_vector (7 downto 0);
-	 		write_address : in integer range 0 to 20_000;
+			data : in std_logic_vector (15 downto 0);
+	 		-- write_address : in integer range 0 to 1300;
 			 game_clk : in std_logic;
+			 we : in std_logic;
 			--graphic_memory_q : in std_logic_vector (31 downto 0);
 
 			-- output
-			--graphic_memory_read_address : out integer range 0 to 20_000;
-			
+			--graphic_memory_read_address : out integer range 0 to 1300;
+			sram_addres_read	: out std_logic_vector(19 downto 0);
 
 			red : out std_logic_vector(7 downto 0) := (others => '0'); --red magnitude output to DAC
 			green : out std_logic_vector(7 downto 0) := (others => '0'); --green magnitude output to DAC
-			blue : out std_logic_vector(7 downto 0) := (others => '0') --blue magnitude output to DAC
+			blue : out std_logic_vector(7 downto 0) := (others => '0'); --blue magnitude output to DAC
+
+			LED : out std_logic_vector(7 downto 0)
 		);
 	end component;
 
@@ -175,6 +183,7 @@ architecture a1 of main is
 		);
 		port (
 		-- input
+		pixel_clk : in std_logic;
 		clk : in std_logic;
 		cannon_1_up : in std_logic;
 		cannon_1_down : in std_logic;
@@ -196,8 +205,8 @@ architecture a1 of main is
 	-- 	port (
 	-- 		clock : in std_logic;
 	-- 		data : in std_logic_vector (7 downto 0);
-	-- 		write_address : in integer range 0 to 20_000;
-	-- 		read_address : in integer range 0 to 20_000;
+	-- 		write_address : in integer range 0 to 1300;
+	-- 		read_address : in integer range 0 to 1300;
 	-- 		we : in std_logic;
 	-- 		q : out std_logic_vector (31 downto 0)
 	-- 	);
@@ -207,7 +216,20 @@ begin
 
 	disp_ena <= disp_ena_inner;
 
-	vga_controller_1 : vga_controller port map(
+	gen_vga_controller: if (screen_w = 800) generate
+
+	vga_controller_1 : vga_controller 
+	generic map (
+		h_pulse => 128,
+		h_bp => 88,
+		h_fp => 40,
+		h_pol => '1',
+		v_pulse => 4,
+		v_bp => 23,
+		v_fp => 1,
+		v_pol => '1'
+	)
+	port map(
 		-- input
 		pixel_clk => pixel_clk,
 		reset_n => reset_low,
@@ -222,6 +244,7 @@ begin
 		h_sync => h_sync,
 		v_sync => v_sync
 	);
+	end generate gen_vga_controller;
 
 	hw_image_generator_1 : hw_image_generator 
 	generic map(
@@ -251,8 +274,10 @@ begin
 		ship_1_image_height => ship_1_image_height_inner,
 
  		data => data,
- 		write_address => write_address,
+ 		-- write_address => write_address,
 		 game_clk => game_clk,
+
+		 we => we,
 		--graphic_memory_q => graphic_memory_q_inner,
 
 		-- output
@@ -260,7 +285,11 @@ begin
 
 		red => red,
 		green => green,
-		blue => blue
+		blue => blue,
+
+		sram_addres_read => sram_addres_read,
+
+		LED => LED
 	);
 
 	core_1 : core
@@ -270,6 +299,7 @@ begin
 		screen_h => screen_h
 	)
 	port map(
+	pixel_clk => pixel_clk,
 	clk	=> game_clk,
 	cannon_1_up => up_1,
 	cannon_1_down => down_1,

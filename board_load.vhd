@@ -42,22 +42,35 @@ entity board_load is
 		LCD_E : out std_logic;
 		LCD_RW : out std_logic;
 		LCD_Data : inout std_logic_vector(7 downto 0);
-		LED : out std_logic_vector(7 downto 0)
+		LED_card_control : out std_logic_vector(7 downto 0);
+		LED : out std_logic_vector(7 downto 0);
+
+
+-------------------sram-----------------------------
+		SRAM_ADDR	: out std_logic_vector(19 downto 0); -- address out
+		SRAM_DQ     : inout std_logic_vector(15 downto 0); -- data in/out
+		SRAM_CE_N   : out std_logic; -- chip select
+		SRAM_OE_N   : out std_logic; -- output enable
+		SRAM_WE_N   : out std_logic; -- write enable
+		SRAM_UB_N   : out std_logic; -- upper byte mask
+		SRAM_LB_N   : out std_logic -- lower byte mask
 
 	);
 end board_load;
 
 architecture a1 of board_load is
-	constant screen_w : integer := 1920;
-	constant screen_h : integer := 1080;
+	constant screen_w : integer := 800;
+	constant screen_h : integer := 600;
 
 	signal vga_clk_inner : std_logic;
 
+	signal pixel_clk_inner : std_logic;
+	
 	signal rd_inner : std_logic;
-	signal continue_inner : std_logic;
+	signal continue_inner : std_logic := '0';
 	signal reset_inner : std_logic := '0';
 	signal addr_inner : std_logic_vector(31 downto 0) := x"00000000"; -- Block address.
-	signal data_o_inner : std_logic_vector(7 downto 0) := x"00"; -- Data read from block.
+	signal data_o_inner : std_logic_vector(7 downto 0); -- Data read from block.
 	signal busy_o_inner : std_logic; -- High when controller is busy performing some operation.
 	signal hndShk_i_inner : std_logic; -- High when host has data to give or has taken data.
 	signal hndShk_o_inner : std_logic; -- High when controller has taken data or has data to give.
@@ -67,8 +80,16 @@ architecture a1 of board_load is
 	--signal graphic_memory_inner : GraphicMemoryType;
 
 	signal graphic_memory_data_inner : std_logic_vector (7 downto 0);
-	signal graphic_memory_write_address_inner : integer range 0 to 20_000;
-	signal graphic_memory_we_inner : std_logic;
+	signal graphic_memory_write_address_inner : integer range 0 to 1300;
+	signal graphic_memory_we_inner : std_logic := '0';
+
+	signal sram_action_inner : std_logic := '0';
+
+	signal sram_data_in_inner   : std_logic_vector(15 downto 0);
+	signal sram_data_out_inner    :  std_logic_vector(15 downto 0); -- data out
+	signal sram_addres_write_inner			:  std_logic_vector(19 downto 0); -- address in
+	signal sram_addres_read_inner			:  std_logic_vector(19 downto 0); -- address in
+	
 
 	--signal disp_ena_test : std_logic := '0';
 
@@ -120,6 +141,31 @@ architecture a1 of board_load is
 	end component;
 	--------------------------------
 
+	component sram is 
+	port (
+		CLOCK 		: in std_logic; -- clock in
+		RESET_N		: in std_logic; -- reset async
+		
+		DATA_IN     : in std_logic_vector(15 downto 0); -- data in
+		DATA_OUT    : out std_logic_vector(15 downto 0); -- data out
+		ADDR_READ			: in std_logic_vector(19 downto 0); -- address in
+		ADDR_WRITE			: in std_logic_vector(19 downto 0); -- address in
+		
+		ACTION		: in std_logic; -- operation to perform
+		
+		SRAM_ADDR	: out std_logic_vector(19 downto 0); -- address out
+		SRAM_DQ     : inout std_logic_vector(15 downto 0); -- data in/out
+		SRAM_CE_N   : out std_logic; -- chip select
+		SRAM_OE_N   : out std_logic; -- output enable
+		SRAM_WE_N   : out std_logic; -- write enable
+		SRAM_UB_N   : out std_logic; -- upper byte mask
+		SRAM_LB_N   : out std_logic; -- lower byte mask
+		
+		LED : out std_logic_vector(7 downto 0)
+	);
+	end component;
+
+
 	component main is
 		generic (
 			game_speed : integer;
@@ -138,8 +184,8 @@ architecture a1 of board_load is
 			fire_1 : in std_logic;
 
 			--graphic_memory : in GraphicMemoryType;
-			data : in std_logic_vector (7 downto 0);
-			write_address : in integer range 0 to 20_000;
+			data : in std_logic_vector (15 downto 0);
+			
 			we : in std_logic;
 
 			-- output
@@ -152,7 +198,11 @@ architecture a1 of board_load is
 			h_sync : out std_logic; --horiztonal sync pulse
 			v_sync : out std_logic; --vertical sync pulse
 
-			disp_ena : out std_logic
+			disp_ena : out std_logic;
+
+			sram_addres_read	: out std_logic_vector(19 downto 0);
+
+			LED : out std_logic_vector(7 downto 0)
 		);
 	end component;
 
@@ -168,7 +218,7 @@ architecture a1 of board_load is
 			FREQ_G : real := 50.0; -- Master clock frequency (MHz).
 			INIT_SPI_FREQ_G : real := 0.4; -- Slow SPI clock freq. during initialization (MHz).
 			SPI_FREQ_G : real := 25.0; -- Operational SPI freq. to the SD card (MHz).
-			BLOCK_SIZE_G : natural := 512; -- Number of bytes in an SD card block or sector.
+			BLOCK_SIZE_G : natural := 2600; -- Number of bytes in an SD card block or sector.
 			CARD_TYPE_G : CardType_t := SD_CARD_E -- Type of SD card connected to this controller.
 		);
 		port (
@@ -189,7 +239,9 @@ architecture a1 of board_load is
 			cs_bo : out std_logic := HI; -- Active-low chip-select.
 			sclk_o : out std_logic := LO; -- Serial clock to SD card.
 			mosi_o : out std_logic := HI; -- Serial data output to SD card.
-			miso_i : in std_logic := ZERO -- Serial data input from SD card.
+			miso_i : in std_logic := ZERO; -- Serial data input from SD card.
+
+			LED_card_control : out std_logic_vector(7 downto 0)
 		);
 	end component;
 
@@ -213,8 +265,8 @@ begin
 
 		--graphic_memory => graphic_memory_inner,
 
-		data => graphic_memory_data_inner,
-		write_address => graphic_memory_write_address_inner,
+		data => sram_data_out_inner,
+		-- write_address => graphic_memory_write_address_inner,
 		we => graphic_memory_we_inner,
 
 		-- output
@@ -225,8 +277,11 @@ begin
 		n_blank => n_blank, --direct blacking output to DAC
 		n_sync => n_sync,
 		h_sync => h_sync, --horiztonal sync pulse
-		v_sync => v_sync --vertical sync pulse
+		v_sync => v_sync, --vertical sync pulse
 
+		sram_addres_read => sram_addres_read_inner
+
+--		LED => LED
 		--disp_ena => disp_ena_test
 	);
 
@@ -239,7 +294,7 @@ begin
 
 	sd_card : SdCardCtrl
 	generic map(
-		FREQ_G => 50.0, -- Master clock frequency (MHz).
+		FREQ_G => 100.0, -- Master clock frequency (MHz).
 		INIT_SPI_FREQ_G => 0.4, -- Slow SPI clock freq. during initialization (MHz).
 		SPI_FREQ_G => 25.0, -- Operational SPI freq. to the SD card (MHz).
 		BLOCK_SIZE_G => 512, -- Number of bytes in an SD card block or sector.
@@ -254,7 +309,7 @@ begin
 		continue_i => continue_inner,
 		addr_i => addr_inner,
 		--data_i : in std_logic_vector(7 downto 0) := x"00"; -- Data to write to block.
-		data_o => data_o_inner,
+		data_o => graphic_memory_data_inner,
 		busy_o => busy_o_inner,
 		hndShk_i => hndShk_i_inner,
 		hndShk_o => hndShk_o_inner,
@@ -263,11 +318,37 @@ begin
 		cs_bo => cs_bo,
 		sclk_o => sclk_o,
 		mosi_o => mosi_o,
-		miso_i => miso_i
+		miso_i => miso_i,
+
+		LED_card_control => LED_card_control
 	);
 	pixel_clk <= vga_clk_inner;
 
 	----------------------------------------------
+
+graphic_sram : sram
+	port map(
+		CLOCK 		=> vga_clk_inner, -- clock in
+		RESET_N		=> '0',
+		
+		DATA_IN     =>  sram_data_in_inner,-- data in
+		DATA_OUT   => sram_data_out_inner, -- data out
+		ADDR_READ	=> sram_addres_read_inner,
+		ADDR_WRITE		=> sram_addres_write_inner,
+		
+		ACTION		=> sram_action_inner, -- operation to perform
+		
+		SRAM_ADDR => SRAM_ADDR, -- address out
+		SRAM_DQ    => SRAM_DQ, -- data in/out
+		SRAM_CE_N  => SRAM_CE_N, -- chip select
+		SRAM_OE_N   => SRAM_OE_N, -- output enable
+		SRAM_WE_N   => SRAM_WE_N, -- write enable
+		SRAM_UB_N  => SRAM_UB_N, -- upper byte mask
+		SRAM_LB_N  => SRAM_LB_N, -- lower byte mask
+		
+		LED => LED
+	);
+
 
 	LCD : LCD_Controller
 	-- generic map(
@@ -365,28 +446,31 @@ begin
 		);
 		variable state : card_states := RESET;
 		variable data_addres : integer := 0;
-		variable wait_ : integer := 0;
+		variable wait_1 : integer := 0;
+
+		variable write_color : std_logic := '1';
 	begin
 		if (rising_edge(game_clk)) then
-			if (wait_ > 0) then
-				wait_ := wait_ - 1;
+			if (wait_1 > 0) then
+				wait_1 := wait_1 - 1;
 			else
-				wait_ := 50_000_000;
+				--wait_1 := 25_000_000;
+				 wait_1 := 1000;
 				-- initialization
 				if (state = RESET) then
 					reset_inner <= '1';
 					state := WAIT_FOR_RESET_STARTS;
-					wait_ := 0;
+					wait_1 := 0;
 				elsif (state = WAIT_FOR_RESET_STARTS) then
 					reset_inner <= '0';
 					if (busy_o_inner = '1') then
 						state := END_OF_RESET;
-						
+
 					end if;
 
 					-- read data
 				elsif (state = END_OF_RESET) then
-				
+
 					if (busy_o_inner = '0') then
 						if (error_o_inner = x"0000") then
 							state := START_READ;
@@ -395,13 +479,15 @@ begin
 						end if;
 					end if;
 				elsif (state = START_READ) then
+					
 					rd_inner <= '1';
-					addr_inner <= x"00000001";
+					addr_inner <= x"00000000";
 					state := WAIT_FOR_READ_STARTS;
 				elsif (state = WAIT_FOR_READ_STARTS) then
 					if (busy_o_inner = '1') then
-						rd_inner <= '0';
-						addr_inner <= x"00000000";
+						-- rd_inner <= '0';
+						--addr_inner <= x"00000000";
+						continue_inner <= '1';
 						state := WAIT_FOR_HNDSHK_UP;
 					end if;
 
@@ -411,12 +497,36 @@ begin
 
 					else
 						if (hndShk_o_inner = '1') then
+							if (write_color = '1') then
+								--graphic_memory_write_address_inner <= data_addres;
+								--graphic_memory_we_inner <= '1';
+								-- graphic_memory_data_inner <= data_o_inner;
+								
+								--LED <= graphic_memory_data_inner;
 
-							graphic_memory_write_address_inner <= data_addres;
-							--graphic_memory_we_inner <= '1';
-							graphic_memory_data_inner <= data_o_inner;
+								
 
-							data_addres := data_addres + 1;
+								sram_data_in_inner(15 downto 8) <= graphic_memory_data_inner; 
+								
+
+								
+								
+								
+
+							else
+								sram_addres_write_inner	<= std_logic_vector(to_unsigned(data_addres, 20));
+								sram_data_in_inner(7 downto 0) <= graphic_memory_data_inner;
+								sram_action_inner <= '1';
+
+								-- total bytes 16196/2=8098
+								if (data_addres > 8098) then
+									continue_inner <= '0';
+									rd_inner <= '0';
+								end if;
+
+								data_addres := data_addres + 1;
+							end if;
+							write_color := not write_color;
 
 							hndShk_i_inner <= '1';
 							state := WAIT_FOR_HNDSHK_DOWN;
@@ -428,12 +538,16 @@ begin
 						state := WAIT_FOR_HNDSHK_UP;
 					end if;
 				elsif (state = READ_END) then
+					graphic_memory_we_inner <= '0';
+					sram_action_inner <= '0';
 					-- END
 				end if;
 			end if;
 		end if;
 
-		LED <= std_logic_vector(to_unsigned(card_states'pos(state) + 1, 8));
+		-- LED <= std_logic_vector(to_unsigned(card_states'pos(state) + 1, 8));
+		-- LED <= graphic_memory_data_inner;
 	end process;
 
+	--LED <= graphic_memory_data_inner;
 end a1;

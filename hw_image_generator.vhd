@@ -35,36 +35,44 @@ entity hw_image_generator is
 		ship_1_memory_begin : in integer;
 		ship_1_image_width : in integer;
 		ship_1_image_height : in integer;
-		data : in std_logic_vector (7 downto 0);
-		write_address : in integer range 0 to 20_000;
+		data : in std_logic_vector (15 downto 0);
+		-- write_address : in integer range 0 to 1300;
 		game_clk : in std_logic;
+		we : in std_logic;
 
 		--graphic_memory_q : in std_logic_vector (31 downto 0);
 
 		-- output
-		--graphic_memory_read_address : out integer range 0 to 20_000;
-
+		--graphic_memory_read_address : out integer range 0 to 1300;
+		sram_addres_read : out std_logic_vector(19 downto 0);
 		red : out std_logic_vector(7 downto 0) := (others => '0'); --red magnitude output to DAC
 		green : out std_logic_vector(7 downto 0) := (others => '0'); --green magnitude output to DAC
-		blue : out std_logic_vector(7 downto 0) := (others => '0')); --blue magnitude output to DAC
+		blue : out std_logic_vector(7 downto 0) := (others => '0'); --blue magnitude output to DAC
+
+		LED : out std_logic_vector(7 downto 0)
+	);
 end hw_image_generator;
 
 architecture a1 of hw_image_generator is
-	type MEM is array(0 to 1000) of std_logic_vector(7 downto 0);
+	type MEM is array(0 to 1300) of std_logic_vector(7 downto 0);
 	signal ram_block : MEM := (others => (others => '0'));
 begin
-
-	process (game_clk)
-	begin
-		if (rising_edge(game_clk)) then
-			ram_block(write_address) <= data;
-		end if;
-	end process;
-
-
+	-- process (game_clk)
+	-- variable pos : integer := 0;
+	-- begin
+	-- 	if (rising_edge(game_clk)) then
+	-- 		if (we = '1') then
+	-- 			ram_block(pos) <= data;
+	-- 			LED <= data;
+	-- 			pos := pos + 1;
+	-- 		end if;
+	-- 	end if;
+	-- end process;
 	process (disp_ena, row, column)
 		--type num is array (0 to 2, 0 to 4) of std_logic_vector (14 downto 0); 
 		variable ship_array_index : integer;
+		variable tmp_color : std_logic_vector(0 to 7);
+
 	begin
 		if (disp_ena = '1') then --display time
 
@@ -93,13 +101,15 @@ begin
 			end if;
 
 			-- ships 1
-			for i in 0 to 9 loop
-				if (column >= ships_1(i).pos1.x and column < ships_1(i).pos1.x + ship_1_image_width and row >= ships_1(i).pos1.y and row < ships_1(i).pos1.y + ship_1_image_height) then
+
+			-- TODO: 9
+			for i in 0 to 1 loop
+				if (column >= ships_1(i).pos1.x - 1 and column < ships_1(i).pos1.x + ship_1_image_width and row >= ships_1(i).pos1.y and row < ships_1(i).pos1.y + ship_1_image_height) then
 					--red <= ships_1(i).ship_type.color(23 downto 16);
 					--green <= ships_1(i).ship_type.color(15 downto 8);
 					--blue <= ships_1(i).ship_type.color(7 downto 0);
 
-					ship_array_index := (ship_1_image_width * (row - ships_1(i).pos1.y) + (column - ships_1(i).pos1.x)) * 4;
+					ship_array_index := (ship_1_image_width * (row - ships_1(i).pos1.y) + (column - ships_1(i).pos1.x)) + 1;
 					--graphic_memory_read_address <= ship_array_index;
 
 					-- if (graphic_memory_q(7 downto 0) = "11111111") then
@@ -108,11 +118,20 @@ begin
 					-- 	red <= graphic_memory_q(15 downto 8);
 					-- end if;
 
-					if (ram_block(ship_array_index + 3) = "11111111") then
-						blue <= ram_block(ship_array_index);
-						green <= ram_block(ship_array_index + 1);
-						red <= ram_block(ship_array_index + 2);
+					--if (ram_block(ship_array_index + 3) = "11111111") then
+					if (column /= ships_1(i).pos1.x + ship_1_image_width) then
+						sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
 					end if;
+
+					if (column /= ships_1(i).pos1.x - 1) then
+						if (data(7 downto 0) = x"FF") then
+							blue <= data(15 downto 8);
+							green <= data(15 downto 8);
+							red <= data(15 downto 8);
+						end if;
+
+					end if;
+					--end if;
 
 				end if;
 			end loop;
@@ -124,6 +143,18 @@ begin
 				green <= (others => '1');
 				blue <= (others => '0');
 			end if;
+
+			-- if (row < 300) then
+			-- sram_addres_read <= std_logic_vector(to_unsigned(column, 20));
+			-- blue <= data(15 downto 8);
+			-- green <= data(15 downto 8);
+			-- red <= data(15 downto 8);
+			-- else
+			-- sram_addres_read <= std_logic_vector(to_unsigned(column, 20));
+			-- blue <= data(7 downto 0);
+			-- green <= data(7 downto 0);
+			-- red <= data(7 downto 0);
+			-- end if;
 
 			-- score 1 dont work
 		else --blanking time

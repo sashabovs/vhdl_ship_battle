@@ -13,7 +13,8 @@ ENTITY vga_controller IS
     v_bp     : INTEGER := 38;     --vertical back porch width in rows
     v_pixels : INTEGER := 400;   --vertical display width in rows
     v_fp     : INTEGER := 1;      --vertical front porch width in rows
-    v_pol    : STD_LOGIC := '1'); --vertical sync pulse polarity (1 = positive, 0 = negative)
+    v_pol    : STD_LOGIC := '1' --vertical sync pulse polarity (1 = positive, 0 = negative)
+	 );
   PORT(
     pixel_clk : IN   STD_LOGIC;  --pixel clock at frequency of VGA mode being used
     reset_n   : IN   STD_LOGIC;  --active low asycnchronous reset
@@ -23,13 +24,49 @@ ENTITY vga_controller IS
     column    : OUT  INTEGER;    --horizontal pixel coordinate
     row       : OUT  INTEGER;    --vertical pixel coordinate
     n_blank   : OUT  STD_LOGIC;  --direct blacking output to DAC
-    n_sync    : OUT  STD_LOGIC); --sync-on-green output to DAC
+    n_sync    : OUT  STD_LOGIC --sync-on-green output to DAC
+	 );
 END vga_controller;
 
 ARCHITECTURE behavior OF vga_controller IS
   CONSTANT h_period : INTEGER := h_pulse + h_bp + h_pixels + h_fp; --total number of pixel clocks in a row
   CONSTANT v_period : INTEGER := v_pulse + v_bp + v_pixels + v_fp; --total number of rows in column
+
+
+--    signal  h_pulse  : INTEGER := 208;    --horiztonal sync pulse width in pixels
+--    signal  h_bp     : INTEGER := 336;    --horiztonal back porch width in pixels
+--    --signal  h_pixels : INTEGER := 500;   --horiztonal display width in pixels
+--    signal  h_fp     : INTEGER := 128;    --horiztonal front porch width in pixels
+--    signal  h_pol    : STD_LOGIC := '0';  --horizontal sync pulse polarity (1 = positive, 0 = negative)
+--    signal  v_pulse  : INTEGER := 3;      --vertical sync pulse width in rows
+--    signal  v_bp     : INTEGER := 38;     --vertical back porch width in rows
+--    --signal  v_pixels : INTEGER := 400;   --vertical display width in rows
+--    signal  v_fp     : INTEGER := 1;      --vertical front porch width in rows
+--    signal  v_pol    : STD_LOGIC := '1'; --vertical sync pulse polarity (1 = positive, 0 = negative)
+
+  
+--   signal h_period : integer;
+--   signal v_period : integer;
 BEGIN
+
+
+-- process
+-- begin
+-- 	if (h_pixels = 800) then
+-- 		h_pulse <= 128;
+-- 		h_bp <= 88;
+-- 		h_fp <= 40;
+-- 		h_pol <= '1';
+-- 		v_pulse <= 4;
+-- 		v_bp <= 23;
+-- 		v_fp <= 1;
+-- 		v_pol <= '1';
+-- 	end if;
+-- 	h_period <= h_pulse + h_bp + h_pixels + h_fp;
+-- 	v_period <= v_pulse + v_bp + v_pixels + v_fp;
+-- end process;
+
+
 
   n_blank <= '1';  --no direct blanking
   n_sync <= '0';   --no sync on green

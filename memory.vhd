@@ -5,15 +5,15 @@ entity single_clock_ram is
 	port (
 		clock : in std_logic;
 		data : in std_logic_vector (7 downto 0);
-		write_address : in integer range 0 to 20_000;
-		read_address : in integer range 0 to 20_000;
+		write_address : in integer range 0 to 1300;
+		read_address : in integer range 0 to 1300;
 		we : in std_logic;
 		q : out std_logic_vector (31 downto 0)
 	);
 end single_clock_ram;
 
 architecture rtl of single_clock_ram is
-	--type MEM is array(0 to 20_000) of std_logic_vector(7 downto 0);
+	--type MEM is array(0 to 1300) of std_logic_vector(7 downto 0);
 	--signal ram_block : MEM := (others => (others => '0'));
 begin
 	process (clock)

@@ -104,6 +104,7 @@ begin
 					ticks := 0;
 					for i in 0 to size - 1 loop
 						if (ships_all_inner(i).pos1.y < screen_h) then
+						
 							ships_all_inner(i).pos1.y <= ships_all_inner(i).pos1.y + 1;
 						else
 							ships_all_inner(i).pos1.y <= 0;

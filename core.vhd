@@ -16,6 +16,7 @@ entity core is
 	);
 	port (
 		-- input
+		pixel_clk : in std_logic;
 		clk : in std_logic;
 		cannon_1_up : in std_logic;
 		cannon_1_down : in std_logic;
@@ -143,6 +144,7 @@ begin
 	port map(
 		-- input
 		clk => clk,
+		--clk => pixel_clk,
 
 		reset => reset_inner,
 		pop_enabled => shells_1_remove_top, --enable read,should be '0' when not in use.
