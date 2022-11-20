@@ -18,6 +18,9 @@ package DataStructures is
 	type ShipType is record
 		color : std_logic_vector (23 downto 0);
 		value : integer;
+
+		ship_image_width : integer;
+		ship_image_height : integer;
 	end record;
 
 	type ShipObject is record
@@ -25,7 +28,26 @@ package DataStructures is
 		ship_type : ShipType;
 	end record;
 
-	type ShipArray is array(0 to 9) of ShipObject;
+	type ShipArray is array(0 to 4) of ShipObject;
+
+	constant destroyer : ShipType := (
+		color => "011111000000000000011111",
+		value => 1,
+		ship_image_width => 11,
+		ship_image_height => 114
+	);
+	constant battleShip : ShipType := (
+		color => "000000011111000000011111",
+		value => 5,
+		ship_image_width => 20,
+		ship_image_height => 65
+	);
+	constant civilShip : ShipType := (
+		color => "000000000000001111111111",
+		value => - 2,
+		ship_image_width => 20,
+		ship_image_height => 65
+	);
 
 	type GraphicMemoryType is array(0 to 1300) of std_logic_vector(7 downto 0);
 end package DataStructures;

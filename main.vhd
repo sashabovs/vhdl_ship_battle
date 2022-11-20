@@ -95,9 +95,10 @@ architecture a1 of main is
 	signal graphic_memory_q_inner : std_logic_vector (31 downto 0);
 
 
-	signal ship_1_memory_begin_inner : integer := 0;
-	signal ship_1_image_width_inner : integer := 20;
-	signal ship_1_image_height_inner : integer := 65;
+	--signal ship_1_memory_begin_inner : integer := 0;
+
+	--constant ship_1_image_width_inner : integer := 20;
+	--constant ship_1_image_height_inner : integer := 65;
 	
 
 	component vga_controller is
@@ -153,9 +154,9 @@ architecture a1 of main is
 
 			--graphic_memory : in GraphicMemoryType;
 
-			ship_1_memory_begin : in integer;
-			ship_1_image_width : in integer;
-			ship_1_image_height : in integer;
+			-- ship_1_memory_begin : in integer;
+			-- ship_1_image_width : in integer;
+			-- ship_1_image_height : in integer;
 
 			data : in std_logic_vector (15 downto 0);
 	 		-- write_address : in integer range 0 to 1300;
@@ -180,6 +181,9 @@ architecture a1 of main is
 			game_speed: integer;
 			screen_w: integer;
 			screen_h: integer
+
+--			ship_1_image_width : integer;
+--			ship_1_image_height : integer
 		);
 		port (
 		-- input
@@ -269,9 +273,9 @@ begin
 
 		--graphic_memory => graphic_memory,
 
-		ship_1_memory_begin => ship_1_memory_begin_inner,
-		ship_1_image_width => ship_1_image_width_inner,
-		ship_1_image_height => ship_1_image_height_inner,
+		--ship_1_memory_begin => ship_1_memory_begin_inner,
+		--ship_1_image_width => ship_1_image_width_inner,
+		--ship_1_image_height => ship_1_image_height_inner,
 
  		data => data,
  		-- write_address => write_address,
@@ -297,6 +301,9 @@ begin
 		game_speed => game_speed,
 		screen_w => screen_w,
 		screen_h => screen_h
+
+		-- ship_1_image_width => ship_1_image_width_inner,
+		-- ship_1_image_height => ship_1_image_height_inner
 	)
 	port map(
 	pixel_clk => pixel_clk,

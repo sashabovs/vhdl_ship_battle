@@ -65,6 +65,7 @@ architecture a1 of board_load is
 	signal vga_clk_inner : std_logic;
 
 	signal pixel_clk_inner : std_logic;
+	signal sram_clk_inner : std_logic;
 	
 	signal rd_inner : std_logic;
 	signal continue_inner : std_logic := '0';
@@ -209,7 +210,8 @@ architecture a1 of board_load is
 	component altpll0 is
 		port (
 			inclk0 : in std_logic := '0';
-			c0 : out std_logic
+			c0 : out std_logic;
+			c1 : out std_logic
 		);
 	end component;
 
@@ -279,16 +281,17 @@ begin
 		h_sync => h_sync, --horiztonal sync pulse
 		v_sync => v_sync, --vertical sync pulse
 
-		sram_addres_read => sram_addres_read_inner
+		sram_addres_read => sram_addres_read_inner,
 
---		LED => LED
+		LED => LED
 		--disp_ena => disp_ena_test
 	);
 
 	altpll0_vga : altpll0 port map(
 
 		inclk0 => game_clk,
-		c0 => vga_clk_inner
+		c0 => vga_clk_inner,
+		c1 => sram_clk_inner
 
 	);
 
@@ -328,7 +331,7 @@ begin
 
 graphic_sram : sram
 	port map(
-		CLOCK 		=> vga_clk_inner, -- clock in
+		CLOCK 		=> sram_clk_inner, -- clock in
 		RESET_N		=> '0',
 		
 		DATA_IN     =>  sram_data_in_inner,-- data in
@@ -344,9 +347,9 @@ graphic_sram : sram
 		SRAM_OE_N   => SRAM_OE_N, -- output enable
 		SRAM_WE_N   => SRAM_WE_N, -- write enable
 		SRAM_UB_N  => SRAM_UB_N, -- upper byte mask
-		SRAM_LB_N  => SRAM_LB_N, -- lower byte mask
+		SRAM_LB_N  => SRAM_LB_N -- lower byte mask
 		
-		LED => LED
+		--LED => LED
 	);
 
 

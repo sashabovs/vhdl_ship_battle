@@ -13,6 +13,9 @@ entity core is
 		game_speed : integer;
 		screen_w : integer := 100;
 		screen_h : integer := 100
+
+		-- ship_1_image_width : integer;
+		-- ship_1_image_height : integer
 	);
 	port (
 		-- input
@@ -110,7 +113,7 @@ architecture a1 of core is
 	signal fifo_full_inner : std_logic;
 	signal data_out_inner : Coordinates;
 	signal shells_1_top_inner : Coordinates;
-	signal ships_1_inner : ShipArray := (others => (pos1 => (x => - 100, y => - 100), ship_type => (color => "000000000000001111111111", value => - 2)));
+	signal ships_1_inner : ShipArray := (others => (pos1 => (x => - 100, y => - 100), ship_type => (color => "000000000000001111111111", value => - 2, ship_image_width => 20, ship_image_height => 65)));
 	signal ship_to_delete_1_inner : integer := 9999;
 
 	signal score_1_inner : integer := 0;
@@ -163,7 +166,7 @@ begin
 
 	ships_1 : ships
 	generic map(
-		size => 10,
+		size => 5,
 		update_period_in_clk => 50 * game_speed,
 		screen_w => screen_w,
 		screen_h => screen_h
@@ -212,9 +215,10 @@ begin
 				if (shells_1_top_inner.x > (screen_w - 10)) then
 					shells_1_remove_top <= '1';
 				end if;
-
-				for i in 0 to 9 loop
-					if (shells_1_top_inner.x < (ships_1_inner(i).pos1.x + 5) and shells_1_top_inner.x > (ships_1_inner(i).pos1.x - 5) and shells_1_top_inner.y < (ships_1_inner(i).pos1.y + 5) and shells_1_top_inner.y > (ships_1_inner(i).pos1.y - 5)) then
+				-- check that top shell hits any ship
+				for i in 0 to 4 loop
+					if (shells_1_top_inner.x < (ships_1_inner(i).pos1.x + ships_1_inner(i).ship_type.ship_image_width)
+						and shells_1_top_inner.x > (ships_1_inner(i).pos1.x) and shells_1_top_inner.y < (ships_1_inner(i).pos1.y + ships_1_inner(i).ship_type.ship_image_height) and shells_1_top_inner.y > (ships_1_inner(i).pos1.y)) then
 						shells_1_remove_top <= '1';
 						ship_to_delete_1_inner <= i;
 						score_1_inner <= score_1_inner + ships_1_inner(i).ship_type.value;

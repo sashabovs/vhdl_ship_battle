@@ -1,10 +1,6 @@
 library work;
-use work.DataStructures.Coordinates;
-use work.DataStructures.ArrayOfShells;
-use work.DataStructures.ShipType;
-use work.DataStructures.ShipObject;
-use work.DataStructures.ShipArray;
-use work.DataStructures.GraphicMemoryType;
+use work.DataStructures.all;
+
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -32,9 +28,9 @@ entity hw_image_generator is
 
 		--graphic_memory : in GraphicMemoryType := (others => (others => '0'));
 
-		ship_1_memory_begin : in integer;
-		ship_1_image_width : in integer;
-		ship_1_image_height : in integer;
+		-- ship_1_memory_begin : in integer;
+		-- ship_1_image_width : in integer;
+		-- ship_1_image_height : in integer;
 		data : in std_logic_vector (15 downto 0);
 		-- write_address : in integer range 0 to 1300;
 		game_clk : in std_logic;
@@ -73,6 +69,12 @@ begin
 		variable ship_array_index : integer;
 		variable tmp_color : std_logic_vector(0 to 7);
 
+		variable letter_pos : Coordinates := (x => 100, y => 550);
+		constant letter_size : Coordinates := (x => 12, y => 14);
+
+		variable ship_memory_offset : integer := 0;
+
+		variable sleep : integer := 0;
 	begin
 		if (disp_ena = '1') then --display time
 
@@ -102,14 +104,24 @@ begin
 
 			-- ships 1
 
-			-- TODO: 9
-			for i in 0 to 1 loop
-				if (column >= ships_1(i).pos1.x - 1 and column < ships_1(i).pos1.x + ship_1_image_width and row >= ships_1(i).pos1.y and row < ships_1(i).pos1.y + ship_1_image_height) then
+			
+			for i in 0 to 4 loop
+
+
+				if (column >= ships_1(i).pos1.x - 1 and column < ships_1(i).pos1.x + ships_1(i).ship_type.ship_image_width and row >= ships_1(i).pos1.y and row < ships_1(i).pos1.y + ships_1(i).ship_type.ship_image_height) then
 					--red <= ships_1(i).ship_type.color(23 downto 16);
 					--green <= ships_1(i).ship_type.color(15 downto 8);
 					--blue <= ships_1(i).ship_type.color(7 downto 0);
 
-					ship_array_index := (ship_1_image_width * (row - ships_1(i).pos1.y) + (column - ships_1(i).pos1.x)) + 1;
+					--ship_array_index := (ship_1_image_width * (ships_1(i).pos1.y + ship_1_image_height - 1 - (row - ships_1(i).pos1.y)) + (column - ships_1(i).pos1.x)) + 1;
+
+					if (ships_1(i).ship_type = destroyer) then
+						ship_memory_offset := 1300;
+					else
+						ship_memory_offset := 0;
+					end if;
+
+					ship_array_index := ship_memory_offset + (ships_1(i).ship_type.ship_image_width * ((row - ships_1(i).pos1.y)) + (column - ships_1(i).pos1.x)) + 1;
 					--graphic_memory_read_address <= ship_array_index;
 
 					-- if (graphic_memory_q(7 downto 0) = "11111111") then
@@ -119,7 +131,7 @@ begin
 					-- end if;
 
 					--if (ram_block(ship_array_index + 3) = "11111111") then
-					if (column /= ships_1(i).pos1.x + ship_1_image_width) then
+					if (column /= ships_1(i).pos1.x + ships_1(i).ship_type.ship_image_width) then
 						sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
 					end if;
 
@@ -134,6 +146,8 @@ begin
 					--end if;
 
 				end if;
+
+
 			end loop;
 
 			-- border
@@ -144,19 +158,66 @@ begin
 				blue <= (others => '0');
 			end if;
 
-			-- if (row < 300) then
-			-- sram_addres_read <= std_logic_vector(to_unsigned(column, 20));
-			-- blue <= data(15 downto 8);
-			-- green <= data(15 downto 8);
-			-- red <= data(15 downto 8);
-			-- else
-			-- sram_addres_read <= std_logic_vector(to_unsigned(column, 20));
-			-- blue <= data(7 downto 0);
-			-- green <= data(7 downto 0);
-			-- red <= data(7 downto 0);
-			-- end if;
-
 			-- score 1 dont work
+
+			if (row >= letter_pos.y - 1 and column >= letter_pos.x and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
+
+				ship_array_index := (5108 + 792 * (row - letter_pos.y) + (letter_size.x * 5 + column - letter_pos.x) + 1) / 2;
+
+				if (column /= letter_pos.x + letter_size.x) then
+					sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
+				end if;
+
+				if (column /= letter_pos.x - 1) then
+
+
+
+					if ((column - letter_pos.x) mod 2 = 0) then
+						if (data(15 downto 8) = x"01") then
+							blue <= x"00";
+							green <= x"00";
+							red <= x"00";
+						end if;
+					else
+						if (data(7 downto 0) = x"01") then
+							blue <= x"00";
+							green <= x"00";
+							red <= x"00";
+						end if;
+					end if;
+
+				end if;
+			end if;
+
+			--if (row < 300) then
+				if (row < 15) then
+				sram_addres_read <= std_logic_vector(to_unsigned((column + 5108 + row * 792)/2, 20));
+
+			
+				if ((column - letter_pos.x) mod 2 = 0) then
+					if (data(15 downto 8) = x"01") then
+						blue <= x"00";
+						green <= x"00";
+						red <= x"00";
+					elsif (data(15 downto 8) = x"00") then
+						blue <= x"FF";
+						green <= x"FF";
+						red <= x"FF";
+					end if;
+				else
+					if (data(7 downto 0) = x"01") then
+						blue <= x"00";
+						green <= x"00";
+						red <= x"00";
+					elsif (data(7 downto 0) = x"00") then
+						blue <= x"FF";
+						green <= x"FF";
+						red <= x"FF";
+					end if;
+				end if;
+			end if;
+
+
 		else --blanking time
 			red <= (others => '0');
 			green <= (others => '0');
