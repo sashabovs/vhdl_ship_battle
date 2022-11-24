@@ -159,7 +159,7 @@ begin
 	cannon_2 : cannon
 	generic map(
 		speed => 100 * game_speed,
-		start_pos_x => (second_border_coord_inner.x - 10),
+		start_pos_x => (second_border_coord_inner.x - 0),
 		start_pos_y => (first_border_coord_inner.y + second_border_coord_inner.y)/2,
 		screen_top => (first_border_coord_inner.y + 0),
 		screen_bottom => (second_border_coord_inner.y + 0)
@@ -310,6 +310,9 @@ begin
 						shells_1_remove_top <= '1';
 						ship_to_delete_1_inner <= i;
 						score_1_inner <= score_1_inner + ships_1_inner(i).ship_type.value;
+						if(score_1_inner < 0) then
+							score_1_inner <= 0;
+						end if;
 					end if;
 				end loop;
 			end if;
@@ -363,6 +366,9 @@ begin
 						shells_2_remove_top <= '1';
 						ship_to_delete_2_inner <= i;
 						score_2_inner <= score_2_inner + ships_2_inner(i).ship_type.value;
+						if(score_2_inner < 0) then
+							score_2_inner <= 0;
+						end if;
 					end if;
 				end loop;
 			end if;
