@@ -5,15 +5,16 @@ use IEEE.NUMERIC_STD.all;
 
 library work;
 use work.DataStructures.all;
-
-
 entity ships is
 	generic (
 		--depth of fifo
 		size : integer := 5;
 		update_period_in_clk : integer := 20;
 		screen_w : integer;
-		screen_h : integer
+		screen_h : integer;
+
+		-- 0 , 1
+		reverse : integer
 	);
 	port (
 		-- input
@@ -89,21 +90,23 @@ begin
 				-- initialization
 				if (init_i <= 1) then
 					ship_type := destroyer;
-					ship_x := (screen_w/20) * 16;
+					ship_x := (screen_w/20) * 4 + (screen_w/20) * 12 * reverse;
 				elsif (init_i <= 2) then
 					ship_type := battleShip;
-					ship_x := (screen_w/20) * 17;
+					ship_x := (screen_w/20) * 3 + (screen_w/20) * 14 * reverse;
 				else
 					ship_type := civilShip;
-					ship_x := (screen_w/20) * 18;
+					ship_x := (screen_w/20) * 2 + (screen_w/20) * 16 * reverse;
 				end if;
-					
+
+	
 				if (init_i = 0 or init_i = 2 or init_i = 3) then
 					ship_y := screen_h * to_integer(unsigned(random_num))/(2 ** 15 - 1);
 				else
 					ship_y := ship_y + screen_h / 2;
 				end if;
-				
+
+
 				-- ship := (pos1 => (x => 0, y => ship_y), ship_type => ship_type);
 				ships_all_inner(init_i) <= (pos1 => (x => ship_x, y => ship_y), ship_type => ship_type);
 				init_i := init_i + 1;
@@ -117,7 +120,7 @@ begin
 					ticks := 0;
 					for i in 0 to size - 1 loop
 						if (ships_all_inner(i).pos1.y > 0) then
-						
+
 							ships_all_inner(i).pos1.y <= ships_all_inner(i).pos1.y - 1;
 						else
 							ships_all_inner(i).pos1.y <= screen_h;

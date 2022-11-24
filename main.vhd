@@ -27,6 +27,10 @@ entity main is
 		down_1 : in std_logic;
 		fire_1 : in std_logic;
 
+		up_2 : in std_logic;
+		down_2 : in std_logic;
+		fire_2 : in std_logic;
+
 		--graphic_memory : in GraphicMemoryType;
 
 		data : in std_logic_vector (15 downto 0);
@@ -65,10 +69,13 @@ architecture a1 of main is
 	-- signal ground : std_logic := '0';
 
 	signal cannon_pos_1_inner : Coordinates;
-	signal shells_1_inner : ArrayOfShells;
-	signal ships_1_inner : ShipArray;
-
 	signal cannon_pos_2_inner : Coordinates;
+	signal shells_1_inner : ArrayOfShells;
+	signal shells_2_inner : ArrayOfShells;
+	signal ships_1_inner : ShipArray;
+	signal ships_2_inner : ShipArray;
+
+	--signal cannon_pos_2_inner : Coordinates;
 
 	-- signal temp_vga_clk : std_logic;
 	signal up_inner : std_logic := '0';
@@ -85,6 +92,7 @@ architecture a1 of main is
 	signal full_test : std_logic := '0';
 	
 	signal score_1_inner : integer := 0;
+	signal score_2_inner : integer := 0;
 
 	signal first_border_coord_inner : Coordinates;
 	signal second_border_coord_inner : Coordinates;
@@ -147,10 +155,14 @@ architecture a1 of main is
 			second_border_coord : in Coordinates;
 
 			cannon_1_pos : in Coordinates;
+			cannon_2_pos : in Coordinates;
 			shells_1 : in ArrayOfShells;
+			shells_2 : in ArrayOfShells;
 			ships_1 : in ShipArray;
-
+			ships_2 : in ShipArray;
+	
 			score_1 : in integer;
+			score_2 : in integer;
 
 			--graphic_memory : in GraphicMemoryType;
 
@@ -186,22 +198,29 @@ architecture a1 of main is
 --			ship_1_image_height : integer
 		);
 		port (
-		-- input
-		pixel_clk : in std_logic;
-		clk : in std_logic;
-		cannon_1_up : in std_logic;
-		cannon_1_down : in std_logic;
-		cannon_1_fire : in std_logic;
-
-		-- output
-		cannon_1_pos_out : out Coordinates;
-		shells_1_out : out ArrayOfShells;
-		ships_1_out: out ShipArray;
-
-		score_1 : out integer;
-
-		first_border_coord : out Coordinates;
-		second_border_coord : out Coordinates
+			-- input
+			pixel_clk : in std_logic;
+			clk : in std_logic;
+			cannon_1_up : in std_logic;
+			cannon_1_down : in std_logic;
+			cannon_1_fire : in std_logic;
+			cannon_2_up : in std_logic;
+			cannon_2_down : in std_logic;
+			cannon_2_fire : in std_logic;
+	
+			-- output
+			cannon_1_pos_out : out Coordinates;
+			cannon_2_pos_out : out Coordinates;
+			shells_1_out : out ArrayOfShells;
+			shells_2_out : out ArrayOfShells;
+			ships_1_out : out ShipArray;
+			ships_2_out : out ShipArray;
+	
+			score_1 : out integer;
+			score_2 : out integer;
+	
+			first_border_coord : out Coordinates;
+			second_border_coord : out Coordinates
 		);
 	end component;
 
@@ -266,10 +285,14 @@ begin
 
 		
 		cannon_1_pos => cannon_pos_1_inner,
+		cannon_2_pos => cannon_pos_2_inner,
 		shells_1 => shells_1_inner,
+		shells_2 => shells_2_inner,
 		ships_1 => ships_1_inner,
+		ships_2 => ships_2_inner,
 
 		score_1 => score_1_inner,
+		score_2 => score_2_inner,
 
 		--graphic_memory => graphic_memory,
 
@@ -311,12 +334,19 @@ begin
 	cannon_1_up => up_1,
 	cannon_1_down => down_1,
 	cannon_1_fire => fire_1,
+	cannon_2_up => up_2,
+	cannon_2_down => down_2,
+	cannon_2_fire => fire_2,
 
 	cannon_1_pos_out => cannon_pos_1_inner,
+	cannon_2_pos_out => cannon_pos_2_inner,
 	shells_1_out => shells_1_inner,
+	shells_2_out => shells_2_inner,
 	ships_1_out => ships_1_inner,
+	ships_2_out => ships_2_inner,
 
 	score_1 => score_1_inner,
+	score_2 => score_2_inner,
 
 	first_border_coord => first_border_coord_inner,
 	second_border_coord => second_border_coord_inner

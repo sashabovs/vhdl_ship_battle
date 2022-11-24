@@ -21,10 +21,14 @@ entity hw_image_generator is
 		second_border_coord : in Coordinates;
 
 		cannon_1_pos : in Coordinates;
+		cannon_2_pos : in Coordinates;
 		shells_1 : in ArrayOfShells;
+		shells_2 : in ArrayOfShells;
 		ships_1 : in ShipArray;
+		ships_2 : in ShipArray;
 
 		score_1 : in integer;
+		score_2 : in integer;
 
 		--graphic_memory : in GraphicMemoryType := (others => (others => '0'));
 
@@ -95,8 +99,26 @@ begin
 				end if;
 			end loop;
 
+			-- shells 2
+			for i in 0 to 9 loop
+				if (shells_2(i).enabled = '1') then
+					if (shells_2(i).cord.x > column - 5 and shells_2(i).cord.x < column + 5 and shells_2(i).cord.y > row - 5 and shells_2(i).cord.y < row + 5) then
+						red <= (others => '1');
+						green <= (others => '0');
+						blue <= (others => '0');
+					end if;
+				end if;
+			end loop;
+
 			-- cannon 1
 			if (column > cannon_1_pos.x - 10 and column < cannon_1_pos.x + 10 and row > cannon_1_pos.y - 10 and row < cannon_1_pos.y + 10) then
+				red <= (others => '0');
+				green <= (others => '1');
+				blue <= (others => '0');
+			end if;
+
+			-- cannon 2
+			if (column > cannon_2_pos.x - 10 and column < cannon_2_pos.x + 10 and row > cannon_2_pos.y - 10 and row < cannon_2_pos.y + 10) then
 				red <= (others => '0');
 				green <= (others => '1');
 				blue <= (others => '0');
@@ -115,7 +137,7 @@ begin
 
 					--ship_array_index := (ship_1_image_width * (ships_1(i).pos1.y + ship_1_image_height - 1 - (row - ships_1(i).pos1.y)) + (column - ships_1(i).pos1.x)) + 1;
 
-					if (ships_1(i).ship_type = destroyer) then
+					if (ships_1(i).ship_type.id = destroyer_id) then
 						ship_memory_offset := 1300;
 					else
 						ship_memory_offset := 0;
@@ -147,7 +169,31 @@ begin
 
 				end if;
 
+			end loop;
 
+			-- ships 2
+			for i in 0 to 4 loop
+				if (column >= ships_2(i).pos1.x - 1 and column < ships_2(i).pos1.x + ships_2(i).ship_type.ship_image_width and row >= ships_2(i).pos1.y and row < ships_2(i).pos1.y + ships_2(i).ship_type.ship_image_height) then
+					if (ships_2(i).ship_type.id = destroyer_id) then
+						ship_memory_offset := 1300;
+					else
+						ship_memory_offset := 0;
+					end if;
+
+					ship_array_index := ship_memory_offset + (ships_2(i).ship_type.ship_image_width * ((row - ships_2(i).pos1.y)) + (column - ships_2(i).pos1.x)) + 1;
+
+					if (column /= ships_2(i).pos1.x + ships_2(i).ship_type.ship_image_width) then
+						sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
+					end if;
+
+					if (column /= ships_2(i).pos1.x - 1) then
+						if (data(7 downto 0) = x"FF") then
+							blue <= data(15 downto 8);
+							green <= data(15 downto 8);
+							red <= data(15 downto 8);
+						end if;
+					end if;
+				end if;
 			end loop;
 
 			-- border

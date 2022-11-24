@@ -20,6 +20,10 @@ entity board_load is
 		down_1 : in std_logic;
 		fire_1 : in std_logic;
 
+		up_2 : in std_logic;
+		down_2 : in std_logic;
+		fire_2 : in std_logic;
+
 		-- output
 		red : out std_logic_vector(7 downto 0); --red magnitude output to DAC
 		green : out std_logic_vector(7 downto 0); --green magnitude output to DAC
@@ -177,32 +181,37 @@ architecture a1 of board_load is
 			-- input
 			pixel_clk : in std_logic;
 			game_clk : in std_logic;
-
+	
 			reset : in std_logic;
-
+	
 			up_1 : in std_logic;
 			down_1 : in std_logic;
 			fire_1 : in std_logic;
-
+	
+			up_2 : in std_logic;
+			down_2 : in std_logic;
+			fire_2 : in std_logic;
+	
 			--graphic_memory : in GraphicMemoryType;
+	
 			data : in std_logic_vector (15 downto 0);
 			
 			we : in std_logic;
-
+	
 			-- output
 			red : out std_logic_vector(7 downto 0); --red magnitude output to DAC
 			green : out std_logic_vector(7 downto 0); --green magnitude output to DAC
 			blue : out std_logic_vector(7 downto 0);
-
+	
 			n_blank : out std_logic; --direct blacking output to DAC
 			n_sync : out std_logic;
 			h_sync : out std_logic; --horiztonal sync pulse
 			v_sync : out std_logic; --vertical sync pulse
-
+	
+			-- for testing
 			disp_ena : out std_logic;
-
+	
 			sram_addres_read	: out std_logic_vector(19 downto 0);
-
 			LED : out std_logic_vector(7 downto 0)
 		);
 	end component;
@@ -264,6 +273,10 @@ begin
 		up_1 => up_1,
 		down_1 => down_1,
 		fire_1 => not fire_1,
+
+		up_2 => up_2,
+		down_2 => down_2,
+		fire_2 => not fire_2,
 
 		--graphic_memory => graphic_memory_inner,
 

@@ -10,7 +10,8 @@ entity queue is
 	generic (
 		--depth of fifo
 		depth : integer := 10;
-		update_period_in_clk : integer := 20
+		update_period_in_clk : integer := 20;
+		direction : integer
 	);
 	port (
 		-- input
@@ -21,7 +22,7 @@ entity queue is
 		data_in : in Coordinates; --input data
 
 		-- output
-		data_out : out Coordinates; --output data
+		--data_out : out Coordinates; --output data
 		data_top : out Coordinates;
 
 		fifo_empty : out std_logic; --set as '1' when the queue is empty
@@ -63,13 +64,13 @@ begin
 				for i in 0 to depth - 1 loop
 					if (full = '1')
 						then
-						memory(i).cord.x <= memory(i).cord.x + 1;
+						memory(i).cord.x <= memory(i).cord.x + direction;
 					elsif (readptr < writeptr and i >= readptr and i < writeptr)
 						then
-						memory(i).cord.x <= memory(i).cord.x + 1;
+						memory(i).cord.x <= memory(i).cord.x + direction;
 					elsif (readptr > writeptr and (i >= readptr or i < writeptr))
 						then
-						memory(i).cord.x <= memory(i).cord.x + 1;
+						memory(i).cord.x <= memory(i).cord.x + direction;
 					end if;
 				end loop;
 			end if;
@@ -84,7 +85,7 @@ begin
 
 			--if (push_enabled = '1') then
 				if (pop_enabled = '1' and empty = '0') then --read
-					data_out <= memory(readptr).cord;
+					--data_out <= memory(readptr).cord;
 					memory(readptr).enabled <= '0';
 					readptr <= readptr + 1;
 					num_elem := num_elem - 1;

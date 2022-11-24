@@ -16,6 +16,8 @@ package DataStructures is
 	type ArrayOfShells is array(0 to 9) of ShellObject;
 
 	type ShipType is record
+		id : integer;
+
 		color : std_logic_vector (23 downto 0);
 		value : integer;
 
@@ -30,19 +32,26 @@ package DataStructures is
 
 	type ShipArray is array(0 to 4) of ShipObject;
 
+	constant destroyer_id : integer := 1;
+	constant battle_ship_id : integer := 2;
+	constant civil_ship_id : integer := 3;
+
 	constant destroyer : ShipType := (
+		id => destroyer_id,
 		color => "011111000000000000011111",
 		value => 1,
 		ship_image_width => 11,
 		ship_image_height => 114
 	);
 	constant battleShip : ShipType := (
+		id => battle_ship_id,
 		color => "000000011111000000011111",
 		value => 5,
 		ship_image_width => 20,
 		ship_image_height => 65
 	);
 	constant civilShip : ShipType := (
+		id => civil_ship_id,
 		color => "000000000000001111111111",
 		value => - 2,
 		ship_image_width => 20,
