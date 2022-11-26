@@ -37,25 +37,6 @@ architecture a1 of ships is
 		);
 	end component;
 
-	-- constant destroyer : ShipType := (
-	-- 	color => "011111000000000000011111",
-	-- 	value => 1,
-	-- 	ship_image_width => 11,
-	-- 	ship_image_height => 114
-	-- );
-	-- constant battleShip : ShipType := (
-	-- 	color => "000000011111000000011111",
-	-- 	value => 5,
-	-- 	ship_image_width => 20,
-	-- 	ship_image_height => 65
-	-- );
-	-- constant civilShip : ShipType := (
-	-- 	color => "000000000000001111111111",
-	-- 	value => - 2,
-	-- 	ship_image_width => 20,
-	-- 	ship_image_height => 65
-	-- );
-
 	signal ships_all_inner : ShipArray := (others => (pos1 => (x => - 100, y => - 100), ship_type => destroyer));
 	signal random_num : std_logic_vector (14 downto 0);
 
@@ -119,7 +100,7 @@ begin
 				if (ticks = update_period_in_clk) then
 					ticks := 0;
 					for i in 0 to size - 1 loop
-						if (ships_all_inner(i).pos1.y > 0) then
+						if (ships_all_inner(i).pos1.y > -100) then
 
 							ships_all_inner(i).pos1.y <= ships_all_inner(i).pos1.y - 1;
 						else

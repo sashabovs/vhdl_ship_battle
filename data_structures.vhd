@@ -73,13 +73,39 @@ package DataStructures is
 		array_of_letters : Letters;
 	end record;
 
+	type Text2 is record
+	position : Coordinates;
+	array_of_letters : String(1 to 20);
+end record;
+
+
+	type TextArray is array(0 to 2) of Text;
+	type TextArray2 is array(0 to 2) of Text2;
+
 	constant score_text_1 : Text := (position => (x => 100, y => 560), array_of_letters => (0 => (letter_num => 18), 1 => (letter_num => 2), 2 => (letter_num => 14), 3 => (letter_num => 17), 4 => (letter_num => 4), 5 => (letter_num => 63)));
 	constant score_num_text_1 : Text := (position => (x => 180, y => 560), array_of_letters => (0 => (letter_num => 52), 1 => (letter_num => 52), 2 => (letter_num => 52), others => (letter_num => -1)));
 
 	constant score_text_2 : Text := (position => (x => 600, y => 560), array_of_letters => (0 => (letter_num => 18), 1 => (letter_num => 2), 2 => (letter_num => 14), 3 => (letter_num => 17), 4 => (letter_num => 4), 5 => (letter_num => 63)));
 	constant score_num_text_2 : Text := (position => (x => 680, y => 560), array_of_letters => (0 => (letter_num => 52), 1 => (letter_num => 52), 2 => (letter_num => 52), others => (letter_num => -1)));
 
-	constant first_digit_index_in_font : natural := 52;
+	constant game_time_text : Text := (position => (x => 350, y => 10), array_of_letters => (0 => (letter_num => 52), 1 => (letter_num => 52), 2 => (letter_num => 63), 3 => (letter_num => 52), 4 => (letter_num => 52), others => (letter_num => -1)));
+
+	constant all_texts : TextArray := (0 => game_time_text, 1 => game_time_text, 2 => game_time_text);
+
+	constant start_game_text : Text2 := (position => (x => 200, y => 260), array_of_letters => "     Start Game     ");
+	constant all_texts_start_game : TextArray2 := (0 => start_game_text, 1 => start_game_text, 2 => start_game_text);
+
+
+	-- constant first_digit_index_in_font : natural := 52;
+	constant letter_size : Coordinates := (x => 12, y => 14);
+
+	---------------------
+	type GameStates is (
+		GAME_START,
+		GAME_PLAY,
+		GAME_END
+	);
+
 
 end package DataStructures;
 

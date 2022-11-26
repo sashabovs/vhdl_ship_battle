@@ -192,6 +192,9 @@ architecture a1 of board_load is
 			up_2 : in std_logic;
 			down_2 : in std_logic;
 			fire_2 : in std_logic;
+
+			start_game : in std_logic;
+			stop_game : in std_logic;
 	
 			--graphic_memory : in GraphicMemoryType;
 	
@@ -280,10 +283,10 @@ begin
 		down_2 => down_2,
 		fire_2 => not fire_2,
 
-		--graphic_memory => graphic_memory_inner,
+		start_game => not fire_1,
+		stop_game => not fire_2,
 
 		data => sram_data_out_inner,
-		-- write_address => graphic_memory_write_address_inner,
 		we => graphic_memory_we_inner,
 
 		-- output
@@ -299,7 +302,6 @@ begin
 		sram_addres_read => sram_addres_read_inner,
 
 		LED => LED
-		--disp_ena => disp_ena_test
 	);
 
 	altpll0_vga : altpll0 port map(

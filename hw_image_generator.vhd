@@ -1,5 +1,6 @@
 library work;
 use work.DataStructures.all;
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.math_real.all;
@@ -33,6 +34,9 @@ entity hw_image_generator is
 		pixel_clk : in std_logic;
 		we : in std_logic;
 
+		game_time : in integer;
+		game_state : in GameStates;
+
 		-- output
 		sram_addres_read : out std_logic_vector(19 downto 0);
 		red : out std_logic_vector(7 downto 0) := (others => '0'); --red magnitude output to DAC
@@ -47,47 +51,180 @@ architecture a1 of hw_image_generator is
 	type score_digits is array(0 to 2) of integer;
 	signal score_1_array : score_digits;
 	signal score_2_array : score_digits;
+
+	type time_digits is array(0 to 4) of integer;
+	signal time_digits_array : time_digits := (others => 0);
+
+	function CharToFontPos(
+		cur_char : character
+		) return integer is
+		variable cur_char_font_num : integer;
+	begin
+		if (character'pos(cur_char) = character'pos(' ')) then
+			cur_char_font_num := 62;
+		elsif (character'pos(cur_char) <= character'pos('9')) then
+			cur_char_font_num := 52 + character'pos(cur_char) - character'pos('0');
+		elsif (character'pos(cur_char) = character'pos(':')) then
+			cur_char_font_num := 63;
+		elsif (character'pos(cur_char) <= character'pos('Z')) then
+			cur_char_font_num := 0 + character'pos(cur_char) - character'pos('A');
+		else
+			cur_char_font_num := 26 + character'pos(cur_char) - character'pos('a');
+		end if;
+		return cur_char_font_num;
+	end function;
+
+--	procedure DrawText(ToState : t_State;
+--	Minutes : integer := 0;
+--	Seconds : integer := 0) is
+--	variable TotalSeconds : integer;
+--	variable ClockCycles : integer;
+--begin
+--	TotalSeconds := Seconds + Minutes * 60;
+--	ClockCycles := TotalSeconds * ClockFrequencyHz - 1;
+--	if Counter = ClockCycles then
+--		Counter <= 0;
+--		State <= ToState;
+--	end if;
+--end procedure;
+
 begin
 
-	process (score_1, score_2)
-	begin
-		score_1_array(0) <= score_1 / 100;
-		score_1_array(1) <= (score_1 mod 100) / 10;
-		score_1_array(2) <= score_1 mod 10;
+process (score_1, score_2)
+begin
+	score_1_array(0) <= score_1 / 100;
+	score_1_array(1) <= (score_1 mod 100) / 10;
+	score_1_array(2) <= score_1 mod 10;
 
-		score_2_array(0) <= score_2 / 100;
-		score_2_array(1) <= (score_2 mod 100) / 10;
-		score_2_array(2) <= score_2 mod 10;
-	end process;
+	score_2_array(0) <= score_2 / 100;
+	score_2_array(1) <= (score_2 mod 100) / 10;
+	score_2_array(2) <= score_2 mod 10;
+end process;
+process (game_clk)
+	variable mins : integer;
+	variable secs : integer;
+begin
+	if (rising_edge(pixel_clk)) then
+		mins := game_time / 60;
+		secs := game_time mod 60;
 
-	process (pixel_clk)
-		variable ship_array_index : integer;
-		variable tmp_color : std_logic_vector(0 to 7);
+		time_digits_array(0) <= mins / 10;
+		time_digits_array(1) <= mins mod 10;
+		-- time_digits_array(2) is ':'
+		time_digits_array(3) <= secs / 10;
+		time_digits_array(4) <= secs mod 10;
+	end if;
+end process;
 
-		variable red_tmp : std_logic_vector(7 downto 0) := (others => '0');
-		variable green_tmp : std_logic_vector(7 downto 0) := (others => '0');
-		variable blue_tmp : std_logic_vector(7 downto 0) := (others => '0');
+process (pixel_clk)
+	variable ship_array_index : integer;
+	variable tmp_color : std_logic_vector(0 to 7);
 
-		variable letter_pos : Coordinates := (x => 100, y => 560);
-		constant letter_size : Coordinates := (x => 12, y => 14);
+	variable red_tmp : std_logic_vector(7 downto 0) := (others => '0');
+	variable green_tmp : std_logic_vector(7 downto 0) := (others => '0');
+	variable blue_tmp : std_logic_vector(7 downto 0) := (others => '0');
 
-		variable ship_memory_offset : integer := 0;
+	variable letter_pos : Coordinates;
 
-		variable sleep : integer := 0;
-		variable letter_num : integer := 0;
+	variable ship_memory_offset : integer := 0;
 
-		-- variable ticks: integer:= 40_000_000;
-		-- variable cur_addr: integer := 100;
-		-- variable data_count: integer:= 0;
-		-- variable prev_data : std_logic_vector (15 downto 0);
-	begin
-		if (rising_edge(pixel_clk)) then
-			if (disp_ena = '1') then --display time
+	variable sleep : integer := 0;
+	variable letter_num : integer := 0;
+
+	-- variable ticks: integer:= 40_000_000;
+	-- variable cur_addr: integer := 100;
+	-- variable data_count: integer:= 0;
+	-- variable prev_data : std_logic_vector (15 downto 0);
+
+	variable cur_char : character;
+	variable cur_char_font_num : integer;
+begin
+	if (rising_edge(pixel_clk)) then
+		if (disp_ena = '1') then --display time
+			if (game_state = GAME_START) then
+				for text_i in 0 to 0 loop
+					for i in all_texts_start_game(text_i).array_of_letters'range loop
+						cur_char := all_texts_start_game(text_i).array_of_letters(i);
+						-- if (character'pos(cur_char) = character'pos(' ')) then
+						-- 	cur_char_font_num := 62;
+						-- elsif (character'pos(cur_char) <= character'pos('9')) then
+						-- 	cur_char_font_num := 52 + character'pos(cur_char) - character'pos('0');
+						-- elsif (character'pos(cur_char) = character'pos(':')) then
+						-- 	cur_char_font_num := 63;
+						-- elsif (character'pos(cur_char) <= character'pos('Z')) then
+						-- 	cur_char_font_num := 0 + character'pos(cur_char) - character'pos('A');
+						-- else
+						-- 	cur_char_font_num := 26 + character'pos(cur_char) - character'pos('a');
+						-- end if;
+						cur_char_font_num := CharToFontPos(cur_char);
+
+						--LED <= std_logic_vector(to_unsigned(cur_char_font_num, 8));
+
+						red_tmp := (others => '1');
+						green_tmp := (others => '1');
+						blue_tmp := (others => '0');
+
+						--if (cur_char_font_num /= - 1) then
+							letter_pos := (x => all_texts_start_game(text_i).position.x + (letter_size.x + 1) * i, y => all_texts_start_game(text_i).position.y);
+							if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
+
+								ship_array_index := (5108 + 792 * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * (cur_char_font_num)) + 1) / 2;
+
+								if (column /= letter_pos.x - 1) then
+									if ((column - letter_pos.x) mod 2 = 0) then
+										if (data(15 downto 8) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
+									else
+										if (data(7 downto 0) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
+									end if;
+								end if;
+							end if;
+						-- end if;
+					end loop;
+				end loop;
+			elsif (game_state = GAME_PLAY) then
 				if (row < first_border_coord.y) then
 					-- header
 					red_tmp := (others => '1');
 					green_tmp := (others => '1');
 					blue_tmp := (others => '0');
+
+					for text_i in 0 to 0 loop
+						for i in all_texts(text_i).array_of_letters'range loop
+							if (all_texts(text_i).array_of_letters(i).letter_num /= - 1) then
+								letter_pos := (x => all_texts(text_i).position.x + (letter_size.x + 1) * i, y => all_texts(text_i).position.y);
+								if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
+
+									ship_array_index := (5108 + 792 * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * (all_texts(text_i).array_of_letters(i).letter_num + time_digits_array(i))) + 1) / 2;
+
+									if (column /= letter_pos.x - 1) then
+										if ((column - letter_pos.x) mod 2 = 0) then
+											if (data(15 downto 8) = x"01") then
+												red_tmp := x"00";
+												green_tmp := x"00";
+												blue_tmp := x"00";
+											end if;
+										else
+											if (data(7 downto 0) = x"01") then
+												red_tmp := x"00";
+												green_tmp := x"00";
+												blue_tmp := x"00";
+											end if;
+										end if;
+
+									end if;
+								end if;
+
+							end if;
+						end loop;
+					end loop;
 				elsif (row < second_border_coord.y) then
 					if (column < first_border_coord.x) then
 						-- left panel
@@ -297,60 +434,66 @@ begin
 					end loop;
 				end if;
 
-				sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
-
-				--------------------------------------
-				--// all letters
-				if (row < 14) then
-					sram_addres_read <= std_logic_vector(to_unsigned((column + 5108 + row * 792)/2, 20));
-					if ((column - letter_pos.x) mod 2 = 0) then
-						if (data(15 downto 8) = x"01") then
-							blue <= x"00";
-							green <= x"00";
-							red <= x"00";
-						elsif (data(15 downto 8) = x"00") then
-							blue <= x"FF";
-							green <= x"FF";
-							red <= x"FF";
-						end if;
-					else
-						if (data(7 downto 0) = x"01") then
-							blue <= x"00";
-							green <= x"00";
-							red <= x"00";
-						elsif (data(7 downto 0) = x"00") then
-							blue <= x"FF";
-							green <= x"FF";
-							red <= x"FF";
-						end if;
-					end if;
-				end if;
-			else 
-			    --blanking time
-				red_tmp := x"00";
-				green_tmp := x"00";
+			elsif (game_state = GAME_END) then
+				red_tmp := x"FF";
+				green_tmp := x"AA";
 				blue_tmp := x"00";
 			end if;
 
-			blue <= blue_tmp;
-			green <= green_tmp;
-			red <= red_tmp;
+			sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
 
-			-- data_count := data_count + 1;
-			-- if (ticks > 0) then 
-			-- 	ticks := ticks - 1;
-			-- else
-			-- 	ticks := 40_000_000;
-
-			-- 	-- cur_addr := cur_addr + 1;
-			-- 	data_count := 0;
-			-- end if;
-			-- cur_addr := cur_addr + 1;
-			-- sram_addres_read <= std_logic_vector(to_unsigned(cur_addr, 20));
-			-- if (data /= prev_data) then 
-			--     LED <= std_logic_vector(to_unsigned(data_count, 8));
-			-- end if;
-			-- prev_data := data;
+			--------------------------------------
+			--// all letters
+			if (row < 14) then
+				sram_addres_read <= std_logic_vector(to_unsigned((column + 5108 + row * 792)/2, 20));
+				if ((column - letter_pos.x) mod 2 = 0) then
+					if (data(15 downto 8) = x"01") then
+						blue <= x"00";
+						green <= x"00";
+						red <= x"00";
+					elsif (data(15 downto 8) = x"00") then
+						blue <= x"FF";
+						green <= x"FF";
+						red <= x"FF";
+					end if;
+				else
+					if (data(7 downto 0) = x"01") then
+						blue <= x"00";
+						green <= x"00";
+						red <= x"00";
+					elsif (data(7 downto 0) = x"00") then
+						blue <= x"FF";
+						green <= x"FF";
+						red <= x"FF";
+					end if;
+				end if;
+			end if;
+		else
+			--blanking time
+			red_tmp := x"00";
+			green_tmp := x"00";
+			blue_tmp := x"00";
 		end if;
-	end process;
+
+		blue <= blue_tmp;
+		green <= green_tmp;
+		red <= red_tmp;
+
+		-- data_count := data_count + 1;
+		-- if (ticks > 0) then 
+		-- 	ticks := ticks - 1;
+		-- else
+		-- 	ticks := 40_000_000;
+
+		-- 	-- cur_addr := cur_addr + 1;
+		-- 	data_count := 0;
+		-- end if;
+		-- cur_addr := cur_addr + 1;
+		-- sram_addres_read <= std_logic_vector(to_unsigned(cur_addr, 20));
+		-- if (data /= prev_data) then 
+		--     LED <= std_logic_vector(to_unsigned(data_count, 8));
+		-- end if;
+		-- prev_data := data;
+	end if;
+end process;
 end a1;

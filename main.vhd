@@ -1,10 +1,5 @@
 library work;
-use work.DataStructures.ArrayOfShells;
-use work.DataStructures.Coordinates;
-use work.DataStructures.ShipType;
-use work.DataStructures.ShipObject;
-use work.DataStructures.ShipArray;
-use work.DataStructures.GraphicMemoryType;
+use work.DataStructures.all;
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -30,6 +25,9 @@ entity main is
 		up_2 : in std_logic;
 		down_2 : in std_logic;
 		fire_2 : in std_logic;
+
+		start_game : in std_logic;
+		stop_game : in std_logic;
 
 		data : in std_logic_vector (15 downto 0);
 
@@ -85,6 +83,9 @@ architecture a1 of main is
 
 	signal first_border_coord_inner : Coordinates;
 	signal second_border_coord_inner : Coordinates;
+
+	signal game_time_inner : integer := 0;
+	signal game_state_inner : GameStates;
 
 	component vga_controller is
 		generic (
@@ -144,6 +145,9 @@ architecture a1 of main is
 			pixel_clk : in std_logic;
 			we : in std_logic;
 
+			game_time : integer;
+			game_state: GameStates;
+
 			-- output
 			sram_addres_read : out std_logic_vector(19 downto 0);
 
@@ -194,7 +198,6 @@ begin
 	disp_ena <= disp_ena_inner;
 
 	gen_vga_controller : if (screen_w = 800) generate
-
 		vga_controller_1 : vga_controller
 		generic map(
 			h_pulse => 128,
@@ -251,6 +254,9 @@ begin
 		pixel_clk => pixel_clk,
 		we => we,
 
+		game_time => game_time_inner,
+		game_state => game_state_inner,
+
 		-- output
 		red => red,
 		green => green,
@@ -290,4 +296,43 @@ begin
 		first_border_coord => first_border_coord_inner,
 		second_border_coord => second_border_coord_inner
 	);
+
+	process (game_clk)
+		variable game_state : GameStates := GAME_START;
+
+		variable game_time_sec : integer := 0;
+		variable ticks_in_sec : integer := 10_000_000;
+		variable ticks : integer := 0;
+	begin
+		if (rising_edge(game_clk)) then
+			if (game_state = GAME_START) then
+				game_time_sec := 0;
+				if (start_game = '1') then
+					game_state := GAME_PLAY;
+					ticks := 0;
+				end if;
+			elsif (game_state = GAME_PLAY) then
+				if (game_time_sec > 60) then
+					game_state := GAME_END;
+				else
+					ticks := ticks + 1;
+					if (ticks = ticks_in_sec) then
+						ticks := 0;
+						game_time_sec := game_time_sec + 1;
+					end if;
+				end if;
+			elsif (game_state = GAME_END) then
+				if (start_game = '1') then
+					game_state := GAME_PLAY;
+					game_time_sec := 0;
+				elsif (stop_game = '1') then
+					game_state := GAME_START;
+				end if;
+			end if;
+
+			game_time_inner <= game_time_sec;
+			game_state_inner <= game_state;
+		end if;
+	end process;
+
 end a1;
