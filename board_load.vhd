@@ -70,6 +70,7 @@ architecture a1 of board_load is
 
 	signal pixel_clk_inner : std_logic;
 	signal sram_clk_inner : std_logic;
+	signal game_clk_inner : std_logic;
 	
 	signal rd_inner : std_logic;
 	signal continue_inner : std_logic := '0';
@@ -220,7 +221,8 @@ architecture a1 of board_load is
 		port (
 			inclk0 : in std_logic := '0';
 			c0 : out std_logic;
-			c1 : out std_logic
+			c1 : out std_logic;
+			c2 : out std_logic
 		);
 	end component;
 
@@ -266,7 +268,7 @@ begin
 	port map(
 		-- input
 		pixel_clk => vga_clk_inner,
-		game_clk => game_clk,
+		game_clk => game_clk_inner,
 
 		reset => reset,
 
@@ -304,7 +306,8 @@ begin
 
 		inclk0 => game_clk,
 		c0 => vga_clk_inner,
-		c1 => sram_clk_inner
+		c1 => sram_clk_inner,
+		c2 => game_clk_inner
 
 	);
 

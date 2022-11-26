@@ -61,6 +61,7 @@ package DataStructures is
 	type GraphicMemoryType is array(0 to 1300) of std_logic_vector(7 downto 0);
 
 
+	-- letters
 	type Letter is record
 		letter_num : integer;
 	end record;
@@ -73,10 +74,12 @@ package DataStructures is
 	end record;
 
 	constant score_text_1 : Text := (position => (x => 100, y => 560), array_of_letters => (0 => (letter_num => 18), 1 => (letter_num => 2), 2 => (letter_num => 14), 3 => (letter_num => 17), 4 => (letter_num => 4), 5 => (letter_num => 63)));
-	constant score_num_text_1 : Text := (position => (x => 175, y => 560), array_of_letters => (0 => (letter_num => 52), 1 => (letter_num => 52), 2 => (letter_num => 52), others => (letter_num => -1)));
+	constant score_num_text_1 : Text := (position => (x => 180, y => 560), array_of_letters => (0 => (letter_num => 52), 1 => (letter_num => 52), 2 => (letter_num => 52), others => (letter_num => -1)));
 
 	constant score_text_2 : Text := (position => (x => 600, y => 560), array_of_letters => (0 => (letter_num => 18), 1 => (letter_num => 2), 2 => (letter_num => 14), 3 => (letter_num => 17), 4 => (letter_num => 4), 5 => (letter_num => 63)));
-	constant score_num_text_2 : Text := (position => (x => 675, y => 560), array_of_letters => (0 => (letter_num => 52), 1 => (letter_num => 52), 2 => (letter_num => 52), others => (letter_num => -1)));
+	constant score_num_text_2 : Text := (position => (x => 680, y => 560), array_of_letters => (0 => (letter_num => 52), 1 => (letter_num => 52), 2 => (letter_num => 52), others => (letter_num => -1)));
+
+	constant first_digit_index_in_font : natural := 52;
 
 end package DataStructures;
 

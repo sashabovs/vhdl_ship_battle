@@ -30,6 +30,7 @@ entity hw_image_generator is
 
 		data : in std_logic_vector (15 downto 0);
 		game_clk : in std_logic;
+		pixel_clk : in std_logic;
 		we : in std_logic;
 
 		-- output
@@ -59,9 +60,13 @@ begin
 		score_2_array(2) <= score_2 mod 10;
 	end process;
 
-	process (disp_ena, row, column)
+	process (pixel_clk)
 		variable ship_array_index : integer;
 		variable tmp_color : std_logic_vector(0 to 7);
+
+		variable red_tmp : std_logic_vector(7 downto 0) := (others => '0');
+		variable green_tmp : std_logic_vector(7 downto 0) := (others => '0');
+		variable blue_tmp : std_logic_vector(7 downto 0) := (others => '0');
 
 		variable letter_pos : Coordinates := (x => 100, y => 560);
 		constant letter_size : Coordinates := (x => 12, y => 14);
@@ -70,265 +75,282 @@ begin
 
 		variable sleep : integer := 0;
 		variable letter_num : integer := 0;
+
+		-- variable ticks: integer:= 40_000_000;
+		-- variable cur_addr: integer := 100;
+		-- variable data_count: integer:= 0;
+		-- variable prev_data : std_logic_vector (15 downto 0);
 	begin
-		if (disp_ena = '1') then --display time
-			-- game area
-			if (row > first_border_coord.y and column > first_border_coord.x and row < second_border_coord.y and column < second_border_coord.x) then
-				red <= (others => '0');
-				green <= (others => '0');
-				blue <= (others => '1');
+		if (rising_edge(pixel_clk)) then
+			if (disp_ena = '1') then --display time
+				if (row < first_border_coord.y) then
+					-- header
+					red_tmp := (others => '1');
+					green_tmp := (others => '1');
+					blue_tmp := (others => '0');
+				elsif (row < second_border_coord.y) then
+					if (column < first_border_coord.x) then
+						-- left panel
+						red_tmp := (others => '1');
+						green_tmp := (others => '1');
+						blue_tmp := (others => '0');
+					elsif (column < second_border_coord.x) then
+						-- game area
+						red_tmp := x"30";
+						green_tmp := x"B0";
+						blue_tmp := x"FF";
 
-				-- shells 1
-				for i in 0 to 9 loop
-					if (shells_1(i).enabled = '1') then
-						if (shells_1(i).cord.x > column - 5 and shells_1(i).cord.x < column + 5 and shells_1(i).cord.y > row - 5 and shells_1(i).cord.y < row + 5) then
-							red <= (others => '1');
-							green <= (others => '0');
-							blue <= (others => '0');
+						-- shells 1
+						for i in 0 to 9 loop
+							if (shells_1(i).enabled = '1') then
+								if (shells_1(i).cord.x > column - 5 and shells_1(i).cord.x < column + 5 and shells_1(i).cord.y > row - 5 and shells_1(i).cord.y < row + 5) then
+									red_tmp := (others => '1');
+									green_tmp := (others => '0');
+									blue_tmp := (others => '0');
+								end if;
+							end if;
+						end loop;
+
+						-- shells 2
+						for i in 0 to 9 loop
+							if (shells_2(i).enabled = '1') then
+								if (shells_2(i).cord.x > column - 5 and shells_2(i).cord.x < column + 5 and shells_2(i).cord.y > row - 5 and shells_2(i).cord.y < row + 5) then
+									red_tmp := (others => '1');
+									green_tmp := (others => '0');
+									blue_tmp := (others => '0');
+								end if;
+							end if;
+						end loop;
+
+						-- cannon 1
+						if (column > cannon_1_pos.x - 10 and column < cannon_1_pos.x + 10 and row > cannon_1_pos.y - 10 and row < cannon_1_pos.y + 10) then
+							red_tmp := (others => '0');
+							green_tmp := (others => '1');
+							blue_tmp := (others => '0');
 						end if;
+
+						-- cannon 2
+						if (column > cannon_2_pos.x - 10 and column < cannon_2_pos.x + 10 and row > cannon_2_pos.y - 10 and row < cannon_2_pos.y + 10) then
+							red_tmp := (others => '0');
+							green_tmp := (others => '1');
+							blue_tmp := (others => '0');
+						end if;
+
+						-- ships 1
+						for i in 0 to 4 loop
+							if (column >= ships_1(i).pos1.x - 1 and column < ships_1(i).pos1.x + ships_1(i).ship_type.ship_image_width and row >= ships_1(i).pos1.y and row < ships_1(i).pos1.y + ships_1(i).ship_type.ship_image_height) then
+								if (ships_1(i).ship_type.id = destroyer_id) then
+									ship_memory_offset := 1300;
+								else
+									ship_memory_offset := 0;
+								end if;
+
+								ship_array_index := ship_memory_offset + (ships_1(i).ship_type.ship_image_width * ((row - ships_1(i).pos1.y)) + (column - ships_1(i).pos1.x)) + 1;
+								if (column /= ships_1(i).pos1.x - 1) then
+									if (data(7 downto 0) = x"FF") then
+										red_tmp := data(15 downto 8);
+										green_tmp := data(15 downto 8);
+										blue_tmp := data(15 downto 8);
+									end if;
+								end if;
+							end if;
+						end loop;
+
+						-- ships 2
+						for i in 0 to 4 loop
+							if (column >= ships_2(i).pos1.x - 1 and column < ships_2(i).pos1.x + ships_2(i).ship_type.ship_image_width and row >= ships_2(i).pos1.y and row < ships_2(i).pos1.y + ships_2(i).ship_type.ship_image_height) then
+								if (ships_2(i).ship_type.id = destroyer_id) then
+									ship_memory_offset := 1300;
+								else
+									ship_memory_offset := 0;
+								end if;
+
+								ship_array_index := ship_memory_offset + (ships_2(i).ship_type.ship_image_width * ((row - ships_2(i).pos1.y)) + (column - ships_2(i).pos1.x)) + 1;
+								if (column /= ships_2(i).pos1.x - 1) then
+									if (data(7 downto 0) = x"FF") then
+										red_tmp := data(15 downto 8);
+										green_tmp := x"55";
+										blue_tmp := data(15 downto 8);
+									end if;
+								end if;
+							end if;
+						end loop;
+					else
+						--right panel
+						red_tmp := (others => '1');
+						green_tmp := (others => '1');
+						blue_tmp := (others => '0');
 					end if;
-				end loop;
+				else
+					-- footer
+					red_tmp := (others => '1');
+					green_tmp := (others => '1');
+					blue_tmp := (others => '0');
 
-				-- shells 2
-				for i in 0 to 9 loop
-					if (shells_2(i).enabled = '1') then
-						if (shells_2(i).cord.x > column - 5 and shells_2(i).cord.x < column + 5 and shells_2(i).cord.y > row - 5 and shells_2(i).cord.y < row + 5) then
-							red <= (others => '1');
-							green <= (others => '0');
-							blue <= (others => '0');
-						end if;
-					end if;
-				end loop;
+					for i in score_text_1.array_of_letters'range loop
+						if (score_text_1.array_of_letters(i).letter_num /= - 1) then
+							letter_pos := (x => score_text_1.position.x + (letter_size.x + 1) * i, y => score_text_1.position.y);
+							if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
 
-				-- cannon 1
-				if (column > cannon_1_pos.x - 10 and column < cannon_1_pos.x + 10 and row > cannon_1_pos.y - 10 and row < cannon_1_pos.y + 10) then
-					red <= (others => '0');
-					green <= (others => '1');
-					blue <= (others => '0');
-				end if;
+								ship_array_index := (5108 + 792 * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * score_text_1.array_of_letters(i).letter_num) + 1) / 2;
 
-				-- cannon 2
-				if (column > cannon_2_pos.x - 10 and column < cannon_2_pos.x + 10 and row > cannon_2_pos.y - 10 and row < cannon_2_pos.y + 10) then
-					red <= (others => '0');
-					green <= (others => '1');
-					blue <= (others => '0');
-				end if;
-
-				-- ships 1
-				for i in 0 to 4 loop
-					if (column >= ships_1(i).pos1.x - 1 and column < ships_1(i).pos1.x + ships_1(i).ship_type.ship_image_width and row >= ships_1(i).pos1.y and row < ships_1(i).pos1.y + ships_1(i).ship_type.ship_image_height) then
-						if (ships_1(i).ship_type.id = destroyer_id) then
-							ship_memory_offset := 1300;
-						else
-							ship_memory_offset := 0;
-						end if;
-
-						ship_array_index := ship_memory_offset + (ships_1(i).ship_type.ship_image_width * ((row - ships_1(i).pos1.y)) + (column - ships_1(i).pos1.x)) + 1;
-
-						if (column /= ships_1(i).pos1.x + ships_1(i).ship_type.ship_image_width) then
-							sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
-						end if;
-
-						if (column /= ships_1(i).pos1.x - 1) then
-							if (data(7 downto 0) = x"FF") then
-								blue <= data(15 downto 8);
-								green <= data(15 downto 8);
-								red <= data(15 downto 8);
+								if (column /= letter_pos.x - 1) then
+									if ((column - letter_pos.x) mod 2 = 0) then
+										if (data(15 downto 8) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
+									else
+										if (data(7 downto 0) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
+									end if;
+								end if;
 							end if;
 						end if;
-					end if;
-				end loop;
+					end loop;
 
-				-- ships 2
-				for i in 0 to 4 loop
-					if (column >= ships_2(i).pos1.x - 1 and column < ships_2(i).pos1.x + ships_2(i).ship_type.ship_image_width and row >= ships_2(i).pos1.y and row < ships_2(i).pos1.y + ships_2(i).ship_type.ship_image_height) then
-						if (ships_2(i).ship_type.id = destroyer_id) then
-							ship_memory_offset := 1300;
-						else
-							ship_memory_offset := 0;
+					for i in score_num_text_1.array_of_letters'range loop
+						if (score_num_text_1.array_of_letters(i).letter_num /= - 1) then
+							letter_pos := (x => score_num_text_1.position.x + (letter_size.x + 1) * i, y => score_num_text_1.position.y);
+							if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
+
+								ship_array_index := (5108 + 792 * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * (score_num_text_1.array_of_letters(i).letter_num + score_1_array(i))) + 1) / 2;
+
+								if (column /= letter_pos.x - 1) then
+									if ((column - letter_pos.x) mod 2 = 0) then
+										if (data(15 downto 8) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
+									else
+										if (data(7 downto 0) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
+									end if;
+
+								end if;
+							end if;
+
 						end if;
+					end loop;
 
-						ship_array_index := ship_memory_offset + (ships_2(i).ship_type.ship_image_width * ((row - ships_2(i).pos1.y)) + (column - ships_2(i).pos1.x)) + 1;
+					--------------------------------------
+					for i in score_text_2.array_of_letters'range loop
+						if (score_text_2.array_of_letters(i).letter_num /= - 1) then
+							letter_pos := (x => score_text_2.position.x + (letter_size.x + 1) * i, y => score_text_2.position.y);
+							if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
 
-						if (column /= ships_2(i).pos1.x + ships_2(i).ship_type.ship_image_width) then
-							sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
-						end if;
+								ship_array_index := (5108 + 792 * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * score_text_2.array_of_letters(i).letter_num) + 1) / 2;
 
-						if (column /= ships_2(i).pos1.x - 1) then
-							if (data(7 downto 0) = x"FF") then
-								blue <= data(15 downto 8);
-								green <= data(15 downto 8);
-								red <= data(15 downto 8);
+								if (column /= letter_pos.x - 1) then
+									if ((column - letter_pos.x) mod 2 = 0) then
+										if (data(15 downto 8) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
+									else
+										if (data(7 downto 0) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
+									end if;
+								end if;
 							end if;
 						end if;
+					end loop;
+
+					for i in score_num_text_2.array_of_letters'range loop
+						if (score_num_text_2.array_of_letters(i).letter_num /= - 1) then
+							letter_pos := (x => score_num_text_2.position.x + (letter_size.x + 1) * i, y => score_num_text_2.position.y);
+							if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
+
+								ship_array_index := (5108 + 792 * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * (score_num_text_2.array_of_letters(i).letter_num + score_2_array(i))) + 1) / 2;
+
+								if (column /= letter_pos.x - 1) then
+									if ((column - letter_pos.x) mod 2 = 0) then
+										if (data(15 downto 8) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
+									else
+										if (data(7 downto 0) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
+									end if;
+
+								end if;
+							end if;
+
+						end if;
+					end loop;
+				end if;
+
+				sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
+
+				--------------------------------------
+				--// all letters
+				if (row < 14) then
+					sram_addres_read <= std_logic_vector(to_unsigned((column + 5108 + row * 792)/2, 20));
+					if ((column - letter_pos.x) mod 2 = 0) then
+						if (data(15 downto 8) = x"01") then
+							blue <= x"00";
+							green <= x"00";
+							red <= x"00";
+						elsif (data(15 downto 8) = x"00") then
+							blue <= x"FF";
+							green <= x"FF";
+							red <= x"FF";
+						end if;
+					else
+						if (data(7 downto 0) = x"01") then
+							blue <= x"00";
+							green <= x"00";
+							red <= x"00";
+						elsif (data(7 downto 0) = x"00") then
+							blue <= x"FF";
+							green <= x"FF";
+							red <= x"FF";
+						end if;
 					end if;
-				end loop;
+				end if;
+			else 
+			    --blanking time
+				red_tmp := x"00";
+				green_tmp := x"00";
+				blue_tmp := x"00";
 			end if;
 
-			-- border
-			if (row > first_border_coord.y and column > first_border_coord.x and row < second_border_coord.y and column < second_border_coord.x) then
-			else
-				red <= (others => '1');
-				green <= (others => '1');
-				blue <= (others => '0');
-			end if;
+			blue <= blue_tmp;
+			green <= green_tmp;
+			red <= red_tmp;
 
-			--------------------------------------
-			for i in score_text_1.array_of_letters'range loop
-				if (score_text_1.array_of_letters(i).letter_num /= - 1) then
-					letter_pos := (x => score_text_1.position.x + letter_size.x * i, y => score_text_1.position.y);
-					if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
+			-- data_count := data_count + 1;
+			-- if (ticks > 0) then 
+			-- 	ticks := ticks - 1;
+			-- else
+			-- 	ticks := 40_000_000;
 
-						ship_array_index := (5108 + 792 * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * score_text_1.array_of_letters(i).letter_num) + 1) / 2;
-
-						if (column /= letter_pos.x + letter_size.x) then
-							sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
-						end if;
-
-						if (column /= letter_pos.x - 1) then
-							if ((column - letter_pos.x) mod 2 = 0) then
-								if (data(15 downto 8) = x"01") then
-									blue <= x"00";
-									green <= x"00";
-									red <= x"00";
-								end if;
-							else
-								if (data(7 downto 0) = x"01") then
-									blue <= x"00";
-									green <= x"00";
-									red <= x"00";
-								end if;
-							end if;
-						end if;
-					end if;
-				end if;
-			end loop;
-
-			for i in score_num_text_1.array_of_letters'range loop
-				if (score_num_text_1.array_of_letters(i).letter_num /= - 1) then
-					letter_pos := (x => score_num_text_1.position.x + letter_size.x * i, y => score_num_text_1.position.y);
-					if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
-
-						ship_array_index := (5108 + 792 * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * (score_num_text_1.array_of_letters(i).letter_num + score_1_array(i))) + 1) / 2;
-
-						if (column /= letter_pos.x + letter_size.x) then
-							sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
-						end if;
-
-						if (column /= letter_pos.x - 1) then
-							if ((column - letter_pos.x) mod 2 = 0) then
-								if (data(15 downto 8) = x"01") then
-									blue <= x"00";
-									green <= x"00";
-									red <= x"00";
-								end if;
-							else
-								if (data(7 downto 0) = x"01") then
-									blue <= x"00";
-									green <= x"00";
-									red <= x"00";
-								end if;
-							end if;
-
-						end if;
-					end if;
-
-				end if;
-			end loop;
-
-			--------------------------------------
-			for i in score_text_2.array_of_letters'range loop
-				if (score_text_2.array_of_letters(i).letter_num /= - 1) then
-					letter_pos := (x => score_text_2.position.x + letter_size.x * i, y => score_text_2.position.y);
-					if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
-
-						ship_array_index := (5108 + 792 * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * score_text_2.array_of_letters(i).letter_num) + 1) / 2;
-
-						if (column /= letter_pos.x + letter_size.x) then
-							sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
-						end if;
-
-						if (column /= letter_pos.x - 1) then
-							if ((column - letter_pos.x) mod 2 = 0) then
-								if (data(15 downto 8) = x"01") then
-									blue <= x"00";
-									green <= x"00";
-									red <= x"00";
-								end if;
-							else
-								if (data(7 downto 0) = x"01") then
-									blue <= x"00";
-									green <= x"00";
-									red <= x"00";
-								end if;
-							end if;
-						end if;
-					end if;
-				end if;
-			end loop;
-
-			for i in score_num_text_2.array_of_letters'range loop
-				if (score_num_text_2.array_of_letters(i).letter_num /= - 1) then
-					letter_pos := (x => score_num_text_2.position.x + letter_size.x * i, y => score_num_text_2.position.y);
-					if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
-
-						ship_array_index := (5108 + 792 * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * (score_num_text_2.array_of_letters(i).letter_num + score_2_array(i))) + 1) / 2;
-
-						if (column /= letter_pos.x + letter_size.x) then
-							sram_addres_read <= std_logic_vector(to_unsigned(ship_array_index, 20));
-						end if;
-
-						if (column /= letter_pos.x - 1) then
-							if ((column - letter_pos.x) mod 2 = 0) then
-								if (data(15 downto 8) = x"01") then
-									blue <= x"00";
-									green <= x"00";
-									red <= x"00";
-								end if;
-							else
-								if (data(7 downto 0) = x"01") then
-									blue <= x"00";
-									green <= x"00";
-									red <= x"00";
-								end if;
-							end if;
-
-						end if;
-					end if;
-
-				end if;
-			end loop;
-
-			--// all letters
-			-- if (row < 14) then
-			-- 	sram_addres_read <= std_logic_vector(to_unsigned((column + 5108 + row * 792)/2, 20));
-			-- 	if ((column - letter_pos.x) mod 2 = 0) then
-			-- 		if (data(15 downto 8) = x"01") then
-			-- 			blue <= x"00";
-			-- 			green <= x"00";
-			-- 			red <= x"00";
-			-- 		elsif (data(15 downto 8) = x"00") then
-			-- 			blue <= x"FF";
-			-- 			green <= x"FF";
-			-- 			red <= x"FF";
-			-- 		end if;
-			-- 	else
-			-- 		if (data(7 downto 0) = x"01") then
-			-- 			blue <= x"00";
-			-- 			green <= x"00";
-			-- 			red <= x"00";
-			-- 		elsif (data(7 downto 0) = x"00") then
-			-- 			blue <= x"FF";
-			-- 			green <= x"FF";
-			-- 			red <= x"FF";
-			-- 		end if;
-			-- 	end if;
+			-- 	-- cur_addr := cur_addr + 1;
+			-- 	data_count := 0;
 			-- end if;
-		else --blanking time
-			red <= (others => '0');
-			green <= (others => '0');
-			blue <= (others => '0');
+			-- cur_addr := cur_addr + 1;
+			-- sram_addres_read <= std_logic_vector(to_unsigned(cur_addr, 20));
+			-- if (data /= prev_data) then 
+			--     LED <= std_logic_vector(to_unsigned(data_count, 8));
+			-- end if;
+			-- prev_data := data;
 		end if;
-
 	end process;
 end a1;

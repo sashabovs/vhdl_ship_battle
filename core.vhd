@@ -131,10 +131,6 @@ architecture a1 of core is
 	signal ships_2_inner : ShipArray := (others => (pos1 => (x => - 100, y => - 100), ship_type => destroyer));
 	signal ship_to_delete_1_inner : integer := 9999;
 	signal ship_to_delete_2_inner : integer := 9999;
-
-	signal score_1_inner : integer := 0;
-	signal score_2_inner : integer := 0;
-
 begin
 
 	cannon_1 : cannon
@@ -291,6 +287,7 @@ begin
 
 	process (clk)
 		variable ticks : integer := 0;
+		variable score_tmp : integer := 0;
 	begin
 		if (rising_edge(clk)) then
 			ticks := ticks + 1;
@@ -309,14 +306,15 @@ begin
 						and shells_1_top_inner.x > (ships_1_inner(i).pos1.x) and shells_1_top_inner.y < (ships_1_inner(i).pos1.y + ships_1_inner(i).ship_type.ship_image_height) and shells_1_top_inner.y > (ships_1_inner(i).pos1.y)) then
 						shells_1_remove_top <= '1';
 						ship_to_delete_1_inner <= i;
-						score_1_inner <= score_1_inner + ships_1_inner(i).ship_type.value;
-						if(score_1_inner < 0) then
-							score_1_inner <= 0;
+						score_tmp := score_tmp + ships_1_inner(i).ship_type.value;
+						if(score_tmp < 0) then
+							score_tmp := 0;
 						end if;
 					end if;
 				end loop;
 			end if;
 
+			score_1 <= score_tmp;
 		end if;
 	end process;
 
@@ -347,6 +345,7 @@ begin
 
 	process (clk)
 		variable ticks : integer := 0;
+		variable score_tmp : integer := 0;
 	begin
 		if (rising_edge(clk)) then
 			ticks := ticks + 1;
@@ -365,14 +364,15 @@ begin
 						and shells_2_top_inner.x > (ships_2_inner(i).pos1.x) and shells_2_top_inner.y < (ships_2_inner(i).pos1.y + ships_2_inner(i).ship_type.ship_image_height) and shells_2_top_inner.y > (ships_2_inner(i).pos1.y)) then
 						shells_2_remove_top <= '1';
 						ship_to_delete_2_inner <= i;
-						score_2_inner <= score_2_inner + ships_2_inner(i).ship_type.value;
-						if(score_2_inner < 0) then
-							score_2_inner <= 0;
+						score_tmp := score_tmp + ships_2_inner(i).ship_type.value;
+						if(score_tmp < 0) then
+							score_tmp := 0;
 						end if;
 					end if;
 				end loop;
 			end if;
 
+			score_2 <= score_tmp;
 		end if;
 	end process;
 
@@ -384,6 +384,4 @@ begin
 	cannon_2_pos_out <= cannon_2_pos_inner;
 	ships_1_out <= ships_1_inner;
 	ships_2_out <= ships_2_inner;
-	score_1 <= score_1_inner;
-	score_2 <= score_2_inner;
 end a1;

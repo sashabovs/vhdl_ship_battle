@@ -58,11 +58,11 @@ begin
 			SRAM_DQ <= (others => 'Z'); -- set the data bus as high impedance (tristate)
 		elsif rising_edge(CLOCK) then -- high clock state (do something!)
 
-			if (tics = sleep) then
-				LED <= ADDR_READ(7 downto 0);
-				tics := 0;
-			end if;
-			tics := tics + 1;
+			-- if (tics = sleep) then
+			-- 	LED <= ADDR_READ(7 downto 0);
+			-- 	tics := 0;
+			-- end if;
+			-- tics := tics + 1;
 
 			SRAM_ADDR <= (others => '-'); -- "don't care"
 			SRAM_DQ <= (others => 'Z'); -- high impedance
