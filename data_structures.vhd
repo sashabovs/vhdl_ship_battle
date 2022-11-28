@@ -11,8 +11,6 @@ package DataStructures is
 		cord : Coordinates;
 		enabled : std_logic;
 	end record;
-
-
 	type ArrayOfShells is array(0 to 9) of ShellObject;
 
 	type ShipType is record
@@ -47,8 +45,8 @@ package DataStructures is
 		id => battle_ship_id,
 		color => "000000011111000000011111",
 		value => 5,
-		ship_image_width => 20,
-		ship_image_height => 65
+		ship_image_width => 10,
+		ship_image_height => 40
 	);
 	constant civilShip : ShipType := (
 		id => civil_ship_id,
@@ -58,45 +56,47 @@ package DataStructures is
 		ship_image_height => 65
 	);
 
-	type GraphicMemoryType is array(0 to 1300) of std_logic_vector(7 downto 0);
-
-
 	-- letters
+	constant text_string_length: integer range 0 to 21 := 21;
+	constant text_num: integer range 0 to 3 := 3;
+
 	type Letter is record
 		letter_num : integer;
 	end record;
 
-	type Letters is array(0 to 5) of Letter;
-
 	type Text is record
 		position : Coordinates;
-		array_of_letters : Letters;
+		array_of_letters : string(1 to text_string_length);
 	end record;
 
-	type Text2 is record
-	position : Coordinates;
-	array_of_letters : String(1 to 20);
-end record;
+	type array_of_digits is array(1 to text_string_length) of integer;
+	type DigitsArray is array(0 to text_num - 1) of array_of_digits;
 
+	type TextArray is array(0 to text_num - 1) of Text;
 
-	type TextArray is array(0 to 2) of Text;
-	type TextArray2 is array(0 to 2) of Text2;
+	constant all_texts_start_game : TextArray := (
+		0 => (position => (x => 200, y => 260), array_of_letters => "Start Game           "),
+		1 => (position => (x => 200, y => 290), array_of_letters => "Press 'KEY0' to start"),
+		2 => (position => (x => 0, y => 0), array_of_letters => (others => ' '))
+	);
 
-	constant score_text_1 : Text := (position => (x => 100, y => 560), array_of_letters => (0 => (letter_num => 18), 1 => (letter_num => 2), 2 => (letter_num => 14), 3 => (letter_num => 17), 4 => (letter_num => 4), 5 => (letter_num => 63)));
-	constant score_num_text_1 : Text := (position => (x => 180, y => 560), array_of_letters => (0 => (letter_num => 52), 1 => (letter_num => 52), 2 => (letter_num => 52), others => (letter_num => -1)));
+	constant all_texts_play_game_header : TextArray := (
+		0 => (position => (x => 350, y => 10), array_of_letters => ("00:00" & (6 to text_string_length => ' '))),
+		1 => (position => (x => 0, y => 0), array_of_letters => (others => ' ')),
+		2 => (position => (x => 0, y => 0), array_of_letters => (others => ' '))
+	);
 
-	constant score_text_2 : Text := (position => (x => 600, y => 560), array_of_letters => (0 => (letter_num => 18), 1 => (letter_num => 2), 2 => (letter_num => 14), 3 => (letter_num => 17), 4 => (letter_num => 4), 5 => (letter_num => 63)));
-	constant score_num_text_2 : Text := (position => (x => 680, y => 560), array_of_letters => (0 => (letter_num => 52), 1 => (letter_num => 52), 2 => (letter_num => 52), others => (letter_num => -1)));
+	constant all_texts_play_game_footer : TextArray := (
+		0 => (position => (x => 100, y => 560), array_of_letters => "Score: 000           "),
+		1 => (position => (x => 600, y => 560), array_of_letters => "Score: 000           "),
+		2 => (position => (x => 0, y => 0), array_of_letters => (others => ' '))
+	);
 
-	constant game_time_text : Text := (position => (x => 350, y => 10), array_of_letters => (0 => (letter_num => 52), 1 => (letter_num => 52), 2 => (letter_num => 63), 3 => (letter_num => 52), 4 => (letter_num => 52), others => (letter_num => -1)));
-
-	constant all_texts : TextArray := (0 => game_time_text, 1 => game_time_text, 2 => game_time_text);
-
-	constant start_game_text : Text2 := (position => (x => 200, y => 260), array_of_letters => "     Start Game     ");
-	constant all_texts_start_game : TextArray2 := (0 => start_game_text, 1 => start_game_text, 2 => start_game_text);
-
-
-	-- constant first_digit_index_in_font : natural := 52;
+	constant all_texts_end_game : TextArray := (
+		0 => (position => (x => 200, y => 260), array_of_letters => "Game over            "),
+		1 => (position => (x => 200, y => 290), array_of_letters => "Press 'KEY0' to play "),
+		2 => (position => (x => 200, y => 290), array_of_letters => "Press 'KEY1' to reset")
+	);
 	constant letter_size : Coordinates := (x => 12, y => 14);
 
 	---------------------
@@ -105,11 +105,7 @@ end record;
 		GAME_PLAY,
 		GAME_END
 	);
-
-
 end package DataStructures;
-
-
 
 package body DataStructures is
 end package body DataStructures;

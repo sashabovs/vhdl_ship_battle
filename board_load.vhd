@@ -68,7 +68,6 @@ architecture a1 of board_load is
 
 	signal vga_clk_inner : std_logic;
 
-	signal pixel_clk_inner : std_logic;
 	signal sram_clk_inner : std_logic;
 	signal game_clk_inner : std_logic;
 	
@@ -315,7 +314,7 @@ begin
 
 	sd_card : SdCardCtrl
 	generic map(
-		FREQ_G => 100.0, -- Master clock frequency (MHz).
+		FREQ_G => 40.0, -- Master clock frequency (MHz).
 		INIT_SPI_FREQ_G => 0.4, -- Slow SPI clock freq. during initialization (MHz).
 		SPI_FREQ_G => 25.0, -- Operational SPI freq. to the SD card (MHz).
 		BLOCK_SIZE_G => 512, -- Number of bytes in an SD card block or sector.
@@ -323,7 +322,8 @@ begin
 	)
 	port map(
 		-- Host-side interface signals.
-		clk_i => game_clk,
+		-- TODO pass here normal 50 MHz clock
+		clk_i => vga_clk_inner,
 		reset_i => reset_inner,
 		rd_i => rd_inner,
 		--wr_i => '0',
@@ -343,6 +343,7 @@ begin
 
 		LED_card_control => LED_card_control
 	);
+
 	pixel_clk <= vga_clk_inner;
 
 	----------------------------------------------
@@ -539,8 +540,8 @@ graphic_sram : sram
 								sram_data_in_inner(7 downto 0) <= graphic_memory_data_inner;
 								sram_action_inner <= '1';
 
-								-- total bytes 16196/2=8098
-								if (data_addres > 8098) then
+								-- total bytes 335392/2=167696
+								if (data_addres > 167696) then
 									continue_inner <= '0';
 									rd_inner <= '0';
 								end if;
