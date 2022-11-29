@@ -32,7 +32,9 @@ entity hw_image_generator is
 		data : in std_logic_vector (15 downto 0);
 		game_clk : in std_logic;
 		pixel_clk : in std_logic;
-		we : in std_logic;
+		-- we : in std_logic;
+
+		load_progress : in integer;
 
 		game_time : in integer;
 		game_state : in GameStates;
@@ -63,34 +65,22 @@ architecture a1 of hw_image_generator is
 		return character'pos(cur_char) - 32;
 	end function;
 
-	--	procedure DrawText(ToState : t_State;
-	--	Minutes : integer := 0;
-	--	Seconds : integer := 0) is
-	--	variable TotalSeconds : integer;
-	--	variable ClockCycles : integer;
-	--begin
-	--	TotalSeconds := Seconds + Minutes * 60;
-	--	ClockCycles := TotalSeconds * ClockFrequencyHz - 1;
-	--	if Counter = ClockCycles then
-	--		Counter <= 0;
-	--		State <= ToState;
-	--	end if;
-	--end procedure;
-
 begin
 
-	process (score_1, score_2)
+	process (pixel_clk)
 	begin
-		score_digits_array(0)(8) <= score_1 / 100;
-		score_digits_array(0)(9) <= (score_1 mod 100) / 10;
-		score_digits_array(0)(10) <= score_1 mod 10;
+		if (rising_edge(pixel_clk)) then
+			score_digits_array(0)(8) <= score_1 / 100;
+			score_digits_array(0)(9) <= (score_1 mod 100) / 10;
+			score_digits_array(0)(10) <= score_1 mod 10;
 
-		score_digits_array(1)(8) <= score_2 / 100;
-		score_digits_array(1)(9) <= (score_2 mod 100) / 10;
-		score_digits_array(1)(10) <= score_2 mod 10;
+			score_digits_array(1)(8) <= score_2 / 100;
+			score_digits_array(1)(9) <= (score_2 mod 100) / 10;
+			score_digits_array(1)(10) <= score_2 mod 10;
+		end if;
 	end process;
-	
-	process (game_clk)
+
+	process (pixel_clk)
 		variable mins : integer;
 		variable secs : integer;
 	begin
@@ -114,7 +104,8 @@ begin
 		variable green_tmp : std_logic_vector(7 downto 0) := (others => '0');
 		variable blue_tmp : std_logic_vector(7 downto 0) := (others => '0');
 
-		variable letter_pos : Coordinates;
+		variable letter_pos_left_top : Coordinates;
+		variable letter_pos_right_bottom : Coordinates;
 
 		variable ship_memory_offset : integer := 0;
 
@@ -128,13 +119,22 @@ begin
 
 		variable cur_char : character;
 		variable cur_char_font_num : integer;
-
-		constant font_start_byte : integer := 5908;
-		constant font_row_size_byte : integer := 1152;
+		variable text_num : integer range 0 to 2 := 0;
 	begin
 		if (rising_edge(pixel_clk)) then
 			if (disp_ena = '1') then --display time
-				if (game_state = GAME_START) then
+				if (game_state = GAME_LOAD) then
+
+					red_tmp := (others => '1');
+					green_tmp := x"BB";
+					blue_tmp := (others => '0');
+
+					if (row >= screen_h/2 and column >= 0 and row < screen_h/2 + 10 and column < load_progress * screen_w/167696) then
+						red_tmp := (others => '0');
+						green_tmp := (others => '1');
+						blue_tmp := (others => '0');
+					end if;
+				elsif (game_state = GAME_START) then
 
 					red_tmp := (others => '1');
 					green_tmp := (others => '1');
@@ -142,27 +142,26 @@ begin
 
 					for text_i in 0 to 1 loop
 						for i in all_texts_start_game(text_i).array_of_letters'range loop
+							--for i in 1 to 4 loop
 							cur_char := all_texts_start_game(text_i).array_of_letters(i);
 							cur_char_font_num := CharToFontPos(cur_char);
 
-							letter_pos := (x => all_texts_start_game(text_i).position.x + (letter_size.x + 1) * i, y => all_texts_start_game(text_i).position.y);
-							if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
+							letter_pos_left_top := (x => all_texts_start_game(text_i).ranges_x(i).start_pos, y => all_texts_start_game(text_i).range_y.start_pos);
+							letter_pos_right_bottom := (x => all_texts_start_game(text_i).ranges_x(i).end_pos, y => all_texts_start_game(text_i).range_y.end_pos);
+							if (row >= letter_pos_left_top.y and column >= letter_pos_left_top.x and row < letter_pos_right_bottom.y and column < letter_pos_right_bottom.x) then
 
-								ship_array_index := (font_start_byte + font_row_size_byte * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * (cur_char_font_num)) + 1) / 2;
-
-								if (column /= letter_pos.x - 1) then
-									if ((column - letter_pos.x) mod 2 = 0) then
-										if (data(15 downto 8) = x"01") then
-											red_tmp := x"00";
-											green_tmp := x"00";
-											blue_tmp := x"00";
-										end if;
-									else
-										if (data(7 downto 0) = x"01") then
-											red_tmp := x"00";
-											green_tmp := x"00";
-											blue_tmp := x"00";
-										end if;
+								ship_array_index := (font_start_byte + font_row_start_pos_y(row - letter_pos_left_top.y) + column - letter_pos_left_top.x + font_letter_start_pos_x(cur_char_font_num)) / 2;
+								if ((column - letter_pos_left_top.x) mod 2 = 0) then
+									if (data(15 downto 8) = x"01") then
+										red_tmp := x"00";
+										green_tmp := x"00";
+										blue_tmp := x"00";
+									end if;
+								else
+									if (data(7 downto 0) = x"01") then
+										red_tmp := x"00";
+										green_tmp := x"00";
+										blue_tmp := x"00";
 									end if;
 								end if;
 							end if;
@@ -179,27 +178,30 @@ begin
 							for i in all_texts_play_game_header(text_i).array_of_letters'range loop
 								cur_char := all_texts_play_game_header(text_i).array_of_letters(i);
 								cur_char_font_num := CharToFontPos(cur_char);
-								letter_pos := (x => all_texts_play_game_header(text_i).position.x + (letter_size.x + 1) * i, y => all_texts_play_game_header(text_i).position.y);
-								if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
 
-									ship_array_index := (font_start_byte + font_row_size_byte * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * (cur_char_font_num + time_digits_array(text_i)(i))) + 1) / 2;
+								letter_pos_left_top := (x => all_texts_play_game_header(text_i).ranges_x(i).start_pos, y => all_texts_play_game_header(text_i).range_y.start_pos);
+								letter_pos_right_bottom := (x => all_texts_play_game_header(text_i).ranges_x(i).end_pos, y => all_texts_play_game_header(text_i).range_y.end_pos);
 
-									if (column /= letter_pos.x - 1) then
-										if ((column - letter_pos.x) mod 2 = 0) then
-											if (data(15 downto 8) = x"01") then
-												red_tmp := x"00";
-												green_tmp := x"00";
-												blue_tmp := x"00";
-											end if;
-										else
-											if (data(7 downto 0) = x"01") then
-												red_tmp := x"00";
-												green_tmp := x"00";
-												blue_tmp := x"00";
-											end if;
+								if (row >= letter_pos_left_top.y and column >= letter_pos_left_top.x and row < letter_pos_right_bottom.y and column < letter_pos_right_bottom.x) then
+
+									ship_array_index := (font_start_byte + font_row_start_pos_y(row - letter_pos_left_top.y) + (column - letter_pos_left_top.x + font_letter_start_pos_x(cur_char_font_num + time_digits_array(text_i)(i)))) / 2;
+
+									--if (column /= letter_pos_left_top.x) then
+									if ((column - letter_pos_left_top.x) mod 2 = 0) then
+										if (data(15 downto 8) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
 										end if;
-
+									else
+										if (data(7 downto 0) = x"01") then
+											red_tmp := x"00";
+											green_tmp := x"00";
+											blue_tmp := x"00";
+										end if;
 									end if;
+
+									--end if;
 								end if;
 							end loop;
 						end loop;
@@ -237,63 +239,71 @@ begin
 								end if;
 							end loop;
 
-							-- cannon 1
-							if (column > cannon_1_pos.x - 10 and column < cannon_1_pos.x + 10 and row > cannon_1_pos.y - 10 and row < cannon_1_pos.y + 10) then
-								red_tmp := (others => '0');
-								green_tmp := (others => '1');
-								blue_tmp := (others => '0');
-							end if;
+							if (column * 2 < screen_w) then
+								-- player 1 side
+								-- cannon 1
+								if (column > cannon_1_pos.x - 10 and column < cannon_1_pos.x + 10 and row > cannon_1_pos.y - 10 and row < cannon_1_pos.y + 10) then
+									red_tmp := (others => '0');
+									green_tmp := (others => '1');
+									blue_tmp := (others => '0');
+								end if;
 
-							-- cannon 2
-							if (column > cannon_2_pos.x - 10 and column < cannon_2_pos.x + 10 and row > cannon_2_pos.y - 10 and row < cannon_2_pos.y + 10) then
-								red_tmp := (others => '0');
-								green_tmp := (others => '1');
-								blue_tmp := (others => '0');
-							end if;
+								-- ships 1
+								for i in 0 to 4 loop
+									if (column >= ships_2(i).pos1.x - 1 and column < ships_2(i).pos1.x + ships_2(i).ship_type.ship_image_width and row >= ships_2(i).pos1.y and row < ships_2(i).pos1.y + ships_2(i).ship_type.ship_image_height) then
+										if (ships_1(i).ship_type.id = destroyer_id) then
+											ship_memory_offset := 1300;
+										elsif (ships_1(i).ship_type.id = battle_ship_id) then
+											ship_memory_offset := 2554;
+										else
+											ship_memory_offset := 0;
+										end if;
 
-							-- ships 1
-							for i in 0 to 4 loop
-								if (column >= ships_1(i).pos1.x - 1 and column < ships_1(i).pos1.x + ships_1(i).ship_type.ship_image_width and row >= ships_1(i).pos1.y and row < ships_1(i).pos1.y + ships_1(i).ship_type.ship_image_height) then
-									if (ships_1(i).ship_type.id = destroyer_id) then
-										ship_memory_offset := 1300;
-									elsif (ships_1(i).ship_type.id = battle_ship_id) then
-										ship_memory_offset := 2554;
-									else
-										ship_memory_offset := 0;
-									end if;
-
-									ship_array_index := ship_memory_offset + (ships_1(i).ship_type.ship_image_width * ((row - ships_1(i).pos1.y)) + (column - ships_1(i).pos1.x)) + 1;
-									if (column /= ships_1(i).pos1.x - 1) then
-										if (data(7 downto 0) = x"FF") then
-											red_tmp := data(15 downto 8);
-											green_tmp := data(15 downto 8);
-											blue_tmp := data(15 downto 8);
+										ship_array_index := ship_memory_offset + (ships_2(i).ship_type.ship_image_width * ((row - ships_2(i).pos1.y)) + (column - ships_2(i).pos1.x)) + 1;
+										if (column /= ships_2(i).pos1.x - 1) then
+											if (data(7 downto 0) = x"FF") then
+												red_tmp := data(15 downto 8);
+												green_tmp := data(15 downto 8);
+												blue_tmp := x"30";
+											end if;
 										end if;
 									end if;
+								end loop;
+
+							else
+								-- player 2 side
+								-- cannon 2
+								if (column > cannon_2_pos.x - 10 and column < cannon_2_pos.x + 10 and row > cannon_2_pos.y - 10 and row < cannon_2_pos.y + 10) then
+									red_tmp := (others => '0');
+									green_tmp := (others => '1');
+									blue_tmp := (others => '0');
 								end if;
-							end loop;
 
-							-- ships 2
-							for i in 0 to 4 loop
-								if (column >= ships_2(i).pos1.x - 1 and column < ships_2(i).pos1.x + ships_2(i).ship_type.ship_image_width and row >= ships_2(i).pos1.y and row < ships_2(i).pos1.y + ships_2(i).ship_type.ship_image_height) then
-									if (ships_1(i).ship_type.id = destroyer_id) then
-										ship_memory_offset := 1300;
-									elsif (ships_1(i).ship_type.id = battle_ship_id) then
-										ship_memory_offset := 2554;
-									else
-										ship_memory_offset := 0;
-									end if;
+								-- ships 2
+								for i in 0 to 4 loop
+									if (column >= ships_1(i).pos1.x - 1 and column < ships_1(i).pos1.x + ships_1(i).ship_type.ship_image_width and row >= ships_1(i).pos1.y and row < ships_1(i).pos1.y + ships_1(i).ship_type.ship_image_height) then
+										if (ships_1(i).ship_type.id = destroyer_id) then
+											ship_memory_offset := 1300;
+										elsif (ships_1(i).ship_type.id = battle_ship_id) then
+											ship_memory_offset := 2554;
+										else
+											ship_memory_offset := 0;
+										end if;
 
-									ship_array_index := ship_memory_offset + (ships_2(i).ship_type.ship_image_width * ((row - ships_2(i).pos1.y)) + (column - ships_2(i).pos1.x)) + 1;
-									if (column /= ships_2(i).pos1.x - 1) then
-										if (data(7 downto 0) = x"FF") then
-											red_tmp := data(15 downto 8);
-											green_tmp := x"55";
-											blue_tmp := data(15 downto 8);
+										ship_array_index := ship_memory_offset + (ships_1(i).ship_type.ship_image_width * ((row - ships_1(i).pos1.y)) + (column - ships_1(i).pos1.x)) + 1;
+										if (column /= ships_1(i).pos1.x - 1) then
+											if (data(7 downto 0) = x"FF") then
+												red_tmp := data(15 downto 8);
+												green_tmp := data(15 downto 8);
+												blue_tmp := data(15 downto 8);
+											end if;
 										end if;
 									end if;
-								end if;
-							end loop;
+								end loop;
+
+								
+
+							end if;
 						else
 							--right panel
 							red_tmp := (others => '1');
@@ -310,48 +320,16 @@ begin
 							for i in all_texts_play_game_footer(text_i).array_of_letters'range loop
 								cur_char := all_texts_play_game_footer(text_i).array_of_letters(i);
 								cur_char_font_num := CharToFontPos(cur_char);
-								letter_pos := (x => all_texts_play_game_footer(text_i).position.x + (letter_size.x + 1) * i, y => all_texts_play_game_footer(text_i).position.y);
-								if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
 
-									ship_array_index := (font_start_byte + font_row_size_byte * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * (cur_char_font_num + score_digits_array(text_i)(i))) + 1) / 2;
+								letter_pos_left_top := (x => all_texts_play_game_footer(text_i).ranges_x(i).start_pos, y => all_texts_play_game_footer(text_i).range_y.start_pos);
+								letter_pos_right_bottom := (x => all_texts_play_game_footer(text_i).ranges_x(i).end_pos, y => all_texts_play_game_footer(text_i).range_y.end_pos);
 
-									if (column /= letter_pos.x - 1) then
-										if ((column - letter_pos.x) mod 2 = 0) then
-											if (data(15 downto 8) = x"01") then
-												red_tmp := x"00";
-												green_tmp := x"00";
-												blue_tmp := x"00";
-											end if;
-										else
-											if (data(7 downto 0) = x"01") then
-												red_tmp := x"00";
-												green_tmp := x"00";
-												blue_tmp := x"00";
-											end if;
-										end if;
+								if (row >= letter_pos_left_top.y and column >= letter_pos_left_top.x and row < letter_pos_right_bottom.y and column < letter_pos_right_bottom.x) then
 
-									end if;
-								end if;
-							end loop;
-						end loop;
-					end if;
+									ship_array_index := (font_start_byte + font_row_start_pos_y(row - letter_pos_left_top.y) + (column - letter_pos_left_top.x + font_letter_start_pos_x(cur_char_font_num + score_digits_array(text_i)(i)))) / 2;
 
-				elsif (game_state = GAME_END) then
-					red_tmp := x"FF";
-					green_tmp := x"AA";
-					blue_tmp := x"00";
-
-					for text_i in 0 to 2 loop
-						for i in all_texts_end_game(text_i).array_of_letters'range loop
-							cur_char := all_texts_end_game(text_i).array_of_letters(i);
-							cur_char_font_num := CharToFontPos(cur_char);
-							letter_pos := (x => all_texts_end_game(text_i).position.x + (letter_size.x + 1) * i, y => all_texts_end_game(text_i).position.y);
-							if (row >= letter_pos.y and column >= letter_pos.x - 1 and row < letter_pos.y + letter_size.y and column < letter_pos.x + letter_size.x) then
-
-								ship_array_index := (font_start_byte + font_row_size_byte * (row - letter_pos.y) + (column - letter_pos.x + letter_size.x * (cur_char_font_num)) + 1) / 2;
-
-								if (column /= letter_pos.x - 1) then
-									if ((column - letter_pos.x) mod 2 = 0) then
+									--if (column /= letter_pos.x - 1) then
+									if ((column - letter_pos_left_top.x) mod 2 = 0) then
 										if (data(15 downto 8) = x"01") then
 											red_tmp := x"00";
 											green_tmp := x"00";
@@ -365,7 +343,82 @@ begin
 										end if;
 									end if;
 
+									--end if;
 								end if;
+							end loop;
+						end loop;
+					end if;
+
+				elsif (game_state = GAME_END) then
+					red_tmp := x"FF";
+					green_tmp := x"AA";
+					blue_tmp := x"00";
+
+					if (score_1 > score_2) then
+						text_num := 0;
+					elsif (score_1 < score_2) then
+						text_num := 1;
+					else
+						text_num := 2;
+					end if;
+					for i in all_texts_end_game_result(text_num).array_of_letters'range loop
+						cur_char := all_texts_end_game_result(text_num).array_of_letters(i);
+						cur_char_font_num := CharToFontPos(cur_char);
+
+						letter_pos_left_top := (x => all_texts_end_game_result(text_num).ranges_x(i).start_pos, y => all_texts_end_game_result(text_num).range_y.start_pos);
+						letter_pos_right_bottom := (x => all_texts_end_game_result(text_num).ranges_x(i).end_pos, y => all_texts_end_game_result(text_num).range_y.end_pos);
+
+						if (row >= letter_pos_left_top.y and column >= letter_pos_left_top.x and row < letter_pos_right_bottom.y and column < letter_pos_right_bottom.x) then
+
+							ship_array_index := (font_start_byte + font_row_start_pos_y(row - letter_pos_left_top.y) + column - letter_pos_left_top.x + font_letter_start_pos_x(cur_char_font_num)) / 2;
+
+							--if (column /= letter_pos_left_top.x - 1) then
+							if ((column - letter_pos_left_top.x) mod 2 = 0) then
+								if (data(15 downto 8) = x"01") then
+									red_tmp := x"00";
+									green_tmp := x"00";
+									blue_tmp := x"00";
+								end if;
+							else
+								if (data(7 downto 0) = x"01") then
+									red_tmp := x"00";
+									green_tmp := x"00";
+									blue_tmp := x"00";
+								end if;
+							end if;
+
+							--end if;
+						end if;
+					end loop;
+
+					for text_i in 0 to 2 loop
+						for i in all_texts_end_game(text_i).array_of_letters'range loop
+							cur_char := all_texts_end_game(text_i).array_of_letters(i);
+							cur_char_font_num := CharToFontPos(cur_char);
+
+							letter_pos_left_top := (x => all_texts_end_game(text_i).ranges_x(i).start_pos, y => all_texts_end_game(text_i).range_y.start_pos);
+							letter_pos_right_bottom := (x => all_texts_end_game(text_i).ranges_x(i).end_pos, y => all_texts_end_game(text_i).range_y.end_pos);
+
+							if (row >= letter_pos_left_top.y and column >= letter_pos_left_top.x and row < letter_pos_right_bottom.y and column < letter_pos_right_bottom.x) then
+
+								ship_array_index := (font_start_byte + font_row_start_pos_y(row - letter_pos_left_top.y) + column - letter_pos_left_top.x + font_letter_start_pos_x(cur_char_font_num)) / 2;
+
+								--if (column /= letter_pos_left_top.x - 1) then
+								if ((column - letter_pos_left_top.x) mod 2 = 0) then
+									if (data(15 downto 8) = x"01") then
+										red_tmp := x"00";
+										green_tmp := x"00";
+										blue_tmp := x"00";
+									end if;
+								else
+									if (data(7 downto 0) = x"01") then
+										red_tmp := x"00";
+										green_tmp := x"00";
+										blue_tmp := x"00";
+									end if;
+								end if;
+
+								--end if;
 							end if;
 						end loop;
 					end loop;

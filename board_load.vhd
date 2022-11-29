@@ -71,6 +71,7 @@ architecture a1 of board_load is
 	signal sram_clk_inner : std_logic;
 	signal game_clk_inner : std_logic;
 	
+	-- sram
 	signal rd_inner : std_logic;
 	signal continue_inner : std_logic := '0';
 	signal reset_inner : std_logic := '0';
@@ -86,7 +87,7 @@ architecture a1 of board_load is
 
 	signal graphic_memory_data_inner : std_logic_vector (7 downto 0);
 	signal graphic_memory_write_address_inner : integer range 0 to 1300;
-	signal graphic_memory_we_inner : std_logic := '0';
+	-- signal graphic_memory_we_inner : std_logic := '0';
 
 	signal sram_action_inner : std_logic := '0';
 
@@ -94,6 +95,8 @@ architecture a1 of board_load is
 	signal sram_data_out_inner    :  std_logic_vector(15 downto 0); -- data out
 	signal sram_addres_write_inner			:  std_logic_vector(19 downto 0); -- address in
 	signal sram_addres_read_inner			:  std_logic_vector(19 downto 0); -- address in
+
+	signal load_progress_inner : integer := 0;
 	
 
 	--signal disp_ena_test : std_logic := '0';
@@ -199,7 +202,9 @@ architecture a1 of board_load is
 	
 			data : in std_logic_vector (15 downto 0);
 			
-			we : in std_logic;
+			-- we : in std_logic;
+
+			load_progress : in integer;
 	
 			-- output
 			red : out std_logic_vector(7 downto 0); --red magnitude output to DAC
@@ -270,7 +275,7 @@ begin
 	port map(
 		-- input
 		pixel_clk => vga_clk_inner,
-		game_clk => game_clk_inner,
+		game_clk => game_clk,
 
 		reset => reset,
 
@@ -286,7 +291,9 @@ begin
 		stop_game => not fire_2,
 
 		data => sram_data_out_inner,
-		we => graphic_memory_we_inner,
+		-- we => graphic_memory_we_inner,
+
+		load_progress => load_progress_inner,
 
 		-- output
 		red => red, --red magnitude output to DAC
@@ -314,7 +321,7 @@ begin
 
 	sd_card : SdCardCtrl
 	generic map(
-		FREQ_G => 40.0, -- Master clock frequency (MHz).
+		FREQ_G => 100.0, -- Master clock frequency (MHz).
 		INIT_SPI_FREQ_G => 0.4, -- Slow SPI clock freq. during initialization (MHz).
 		SPI_FREQ_G => 25.0, -- Operational SPI freq. to the SD card (MHz).
 		BLOCK_SIZE_G => 512, -- Number of bytes in an SD card block or sector.
@@ -323,7 +330,7 @@ begin
 	port map(
 		-- Host-side interface signals.
 		-- TODO pass here normal 50 MHz clock
-		clk_i => vga_clk_inner,
+		clk_i => game_clk,
 		reset_i => reset_inner,
 		rd_i => rd_inner,
 		--wr_i => '0',
@@ -524,17 +531,7 @@ graphic_sram : sram
 								--graphic_memory_we_inner <= '1';
 								-- graphic_memory_data_inner <= data_o_inner;
 								
-								--LED <= graphic_memory_data_inner;
-
-								
-
 								sram_data_in_inner(15 downto 8) <= graphic_memory_data_inner; 
-								
-
-								
-								
-								
-
 							else
 								sram_addres_write_inner	<= std_logic_vector(to_unsigned(data_addres, 20));
 								sram_data_in_inner(7 downto 0) <= graphic_memory_data_inner;
@@ -547,6 +544,7 @@ graphic_sram : sram
 								end if;
 
 								data_addres := data_addres + 1;
+								load_progress_inner <= data_addres;
 							end if;
 							write_color := not write_color;
 
@@ -560,7 +558,7 @@ graphic_sram : sram
 						state := WAIT_FOR_HNDSHK_UP;
 					end if;
 				elsif (state = READ_END) then
-					graphic_memory_we_inner <= '0';
+					-- graphic_memory_we_inner <= '0';
 					sram_action_inner <= '0';
 					-- END
 				end if;

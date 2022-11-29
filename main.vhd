@@ -31,7 +31,9 @@ entity main is
 
 		data : in std_logic_vector (15 downto 0);
 
-		we : in std_logic;
+		-- we : in std_logic;
+
+		load_progress : in integer;
 
 		-- output
 		red : out std_logic_vector(7 downto 0); --red magnitude output to DAC
@@ -143,7 +145,9 @@ architecture a1 of main is
 			data : in std_logic_vector (15 downto 0);
 			game_clk : in std_logic;
 			pixel_clk : in std_logic;
-			we : in std_logic;
+			-- we : in std_logic;
+
+			load_progress : in integer;
 
 			game_time : integer;
 			game_state: GameStates;
@@ -252,7 +256,9 @@ begin
 		data => data,
 		game_clk => game_clk,
 		pixel_clk => pixel_clk,
-		we => we,
+		-- we => we,
+
+		load_progress => load_progress,
 
 		game_time => game_time_inner,
 		game_state => game_state_inner,
@@ -298,39 +304,44 @@ begin
 	);
 
 	process (game_clk)
-		variable game_state : GameStates := GAME_START;
+		variable game_state : GameStates := GAME_LOAD;
 
-		variable game_time_sec : integer := 0;
-		variable ticks_in_sec : integer := 10_000_000;
+		variable game_cur_time_sec : integer := 0;
+		variable game_time_sec : integer := 60;
+		variable ticks_in_sec : integer := 50_000_000;
 		variable ticks : integer := 0;
 	begin
 		if (rising_edge(game_clk)) then
-			if (game_state = GAME_START) then
-				game_time_sec := 0;
+			if (game_state = GAME_LOAD) then
+				if (load_progress >= 167696) then
+					game_state := GAME_START;
+				end if;
+			elsif (game_state = GAME_START) then
+				game_cur_time_sec := game_time_sec;
 				if (start_game = '1') then
 					game_state := GAME_PLAY;
 					ticks := 0;
 				end if;
 			elsif (game_state = GAME_PLAY) then
-				if (game_time_sec > 60) then
+				if (game_cur_time_sec <= 0) then
 					game_state := GAME_END;
 				else
 					ticks := ticks + 1;
 					if (ticks = ticks_in_sec) then
 						ticks := 0;
-						game_time_sec := game_time_sec + 1;
+						game_cur_time_sec := game_cur_time_sec - 1;
 					end if;
 				end if;
 			elsif (game_state = GAME_END) then
 				if (start_game = '1') then
 					game_state := GAME_PLAY;
-					game_time_sec := 0;
+					game_cur_time_sec := game_time_sec;
 				elsif (stop_game = '1') then
 					game_state := GAME_START;
 				end if;
 			end if;
 
-			game_time_inner <= game_time_sec;
+			game_time_inner <= game_cur_time_sec;
 			game_state_inner <= game_state;
 		end if;
 	end process;
