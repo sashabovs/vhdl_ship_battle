@@ -32,7 +32,6 @@ entity hw_image_generator is
 		data : in std_logic_vector (15 downto 0);
 		game_clk : in std_logic;
 		pixel_clk : in std_logic;
-		-- we : in std_logic;
 
 		load_progress : in integer;
 
@@ -251,15 +250,15 @@ begin
 								-- ships 1
 								for i in 0 to 4 loop
 									if (column >= ships_2(i).pos1.x - 1 and column < ships_2(i).pos1.x + ships_2(i).ship_type.ship_image_width and row >= ships_2(i).pos1.y and row < ships_2(i).pos1.y + ships_2(i).ship_type.ship_image_height) then
-										if (ships_1(i).ship_type.id = destroyer_id) then
-											ship_memory_offset := 1300;
-										elsif (ships_1(i).ship_type.id = battle_ship_id) then
-											ship_memory_offset := 2554;
-										else
-											ship_memory_offset := 0;
-										end if;
+										-- if (ships_2(i).ship_type.id = destroyer_id) then
+										-- 	ship_memory_offset := 1300;
+										-- elsif (ships_2(i).ship_type.id = battle_ship_id) then
+										-- 	ship_memory_offset := 2554;
+										-- else
+										-- 	ship_memory_offset := 0;
+										-- end if;
 
-										ship_array_index := ship_memory_offset + (ships_2(i).ship_type.ship_image_width * ((row - ships_2(i).pos1.y)) + (column - ships_2(i).pos1.x)) + 1;
+										ship_array_index := ships_2(i).ship_type.ship_memory_offset + (ships_2(i).ship_type.ship_image_width * ((row - ships_2(i).pos1.y)) + (column - ships_2(i).pos1.x)) + 1;
 										if (column /= ships_2(i).pos1.x - 1) then
 											if (data(7 downto 0) = x"FF") then
 												red_tmp := data(15 downto 8);
@@ -282,15 +281,15 @@ begin
 								-- ships 2
 								for i in 0 to 4 loop
 									if (column >= ships_1(i).pos1.x - 1 and column < ships_1(i).pos1.x + ships_1(i).ship_type.ship_image_width and row >= ships_1(i).pos1.y and row < ships_1(i).pos1.y + ships_1(i).ship_type.ship_image_height) then
-										if (ships_1(i).ship_type.id = destroyer_id) then
-											ship_memory_offset := 1300;
-										elsif (ships_1(i).ship_type.id = battle_ship_id) then
-											ship_memory_offset := 2554;
-										else
-											ship_memory_offset := 0;
-										end if;
+										-- if (ships_1(i).ship_type.id = destroyer_id) then
+										-- 	ship_memory_offset := 1300;
+										-- elsif (ships_1(i).ship_type.id = battle_ship_id) then
+										-- 	ship_memory_offset := 2554;
+										-- else
+										-- 	ship_memory_offset := 0;
+										-- end if;
 
-										ship_array_index := ship_memory_offset + (ships_1(i).ship_type.ship_image_width * ((row - ships_1(i).pos1.y)) + (column - ships_1(i).pos1.x)) + 1;
+										ship_array_index := ships_1(i).ship_type.ship_memory_offset + (ships_1(i).ship_type.ship_image_width * ((row - ships_1(i).pos1.y)) + (column - ships_1(i).pos1.x)) + 1;
 										if (column /= ships_1(i).pos1.x - 1) then
 											if (data(7 downto 0) = x"FF") then
 												red_tmp := data(15 downto 8);

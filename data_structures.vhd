@@ -26,6 +26,8 @@ package DataStructures is
 
 		ship_image_width : integer;
 		ship_image_height : integer;
+
+		ship_memory_offset: integer;
 	end record;
 
 	type ShipObject is record
@@ -44,21 +46,24 @@ package DataStructures is
 		color => "011111000000000000011111",
 		value => 1,
 		ship_image_width => 11,
-		ship_image_height => 114
+		ship_image_height => 114,
+		ship_memory_offset => 1300
 	);
 	constant battleShip : ShipType := (
 		id => battle_ship_id,
 		color => "000000011111000000011111",
 		value => 5,
 		ship_image_width => 10,
-		ship_image_height => 40
+		ship_image_height => 40,
+		ship_memory_offset => 2554
 	);
 	constant civilShip : ShipType := (
 		id => civil_ship_id,
 		color => "000000000000001111111111",
 		value => - 2,
 		ship_image_width => 20,
-		ship_image_height => 65
+		ship_image_height => 65,
+		ship_memory_offset => 0
 	);
 
 	-- letters

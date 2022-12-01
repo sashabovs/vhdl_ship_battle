@@ -16,7 +16,7 @@ entity queue is
 	port (
 		-- input
 		clk : in std_logic;
-		reset : in std_logic;
+		core_reset : in std_logic;
 		pop_enabled : in std_logic; --enable read,should be '0' when not in use.
 		push_enabled : in std_logic; --enable write,should be '0' when not in use.
 		data_in : in Coordinates; --input data
@@ -24,9 +24,6 @@ entity queue is
 		-- output
 		--data_out : out Coordinates; --output data
 		data_top : out Coordinates;
-
-		fifo_empty : out std_logic; --set as '1' when the queue is empty
-		fifo_full : out std_logic; --set as '1' when the queue is full
 
 		data_all : out ArrayOfShells
 	);
@@ -41,49 +38,49 @@ architecture a1 of queue is
 	signal empty : std_logic := '1';
 	signal full : std_logic := '0';
 begin
-	fifo_empty <= empty;
-	fifo_full <= full;
 
-	process (clk, reset)
-		--this is the number of elements stored in fifo at a time.
-		--this variable is used to decide whether the fifo is empty or full.
+	process (clk)
 		variable num_elem : integer := 0;
 		variable ticks : integer := 0;
 	begin
-		if (reset = '1') then
-			--data_out <= (others => Coordinates_INIT);
-			empty <= '1';
-			full <= '0';
-			readptr <= 0;
-			writeptr <= 0;
-			num_elem := 0;
-		elsif (rising_edge(clk)) then
-			ticks := ticks + 1;
-			if (ticks = update_period_in_clk) then
-				ticks := 0;
-				for i in 0 to depth - 1 loop
-					if (full = '1')
-						then
-						memory(i).cord.x <= memory(i).cord.x + direction;
-					elsif (readptr < writeptr and i >= readptr and i < writeptr)
-						then
-						memory(i).cord.x <= memory(i).cord.x + direction;
-					elsif (readptr > writeptr and (i >= readptr or i < writeptr))
-						then
-						memory(i).cord.x <= memory(i).cord.x + direction;
-					end if;
+		if (rising_edge(clk)) then
+
+			if (core_reset = '1') then
+
+				for i in memory'range loop
+					memory(i).enabled <= '0';
 				end loop;
-			end if;
 
-			---------------------------------------
-
-			if (empty = '0') then
-				data_top <= memory(readptr).cord;
+				empty <= '1';
+				full <= '0';
+				readptr <= 0;
+				writeptr <= 0;
+				num_elem := 0;
 			else
-			data_top <= (x => -1, y => -1);
-			end if;
+				ticks := ticks + 1;
+				if (ticks = update_period_in_clk) then
+					ticks := 0;
+					for i in 0 to depth - 1 loop
+						if (full = '1')
+							then
+							memory(i).cord.x <= memory(i).cord.x + direction;
+						elsif (readptr < writeptr and i >= readptr and i < writeptr)
+							then
+							memory(i).cord.x <= memory(i).cord.x + direction;
+						elsif (readptr > writeptr and (i >= readptr or i < writeptr))
+							then
+							memory(i).cord.x <= memory(i).cord.x + direction;
+						end if;
+					end loop;
+				end if;
 
-			--if (push_enabled = '1') then
+				---------------------------------------
+
+				if (empty = '0') then
+					data_top <= memory(readptr).cord;
+				else
+					data_top <= (x => - 1, y => - 1);
+				end if;
 				if (pop_enabled = '1' and empty = '0') then --read
 					--data_out <= memory(readptr).cord;
 					memory(readptr).enabled <= '0';
@@ -93,7 +90,7 @@ begin
 
 				if (push_enabled = '1' and full = '0') then --write
 					memory(writeptr).cord <= data_in;
-					memory(writeptr).enabled <= '1'; 
+					memory(writeptr).enabled <= '1';
 					writeptr <= writeptr + 1;
 					num_elem := num_elem + 1;
 				end if;
@@ -116,7 +113,7 @@ begin
 				else
 					full <= '0';
 				end if;
-			--end if;
+			end if;
 		end if;
 	end process;
 

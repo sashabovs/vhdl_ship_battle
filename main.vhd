@@ -89,6 +89,9 @@ architecture a1 of main is
 	signal game_time_inner : integer := 0;
 	signal game_state_inner : GameStates;
 
+	signal core_reset_inner : std_logic := '0';
+	signal start_init_inner : std_logic := '0';
+
 	component vga_controller is
 		generic (
 			h_pulse : integer := 44; --horiztonal sync pulse width in pixels
@@ -179,6 +182,8 @@ architecture a1 of main is
 			cannon_2_up : in std_logic;
 			cannon_2_down : in std_logic;
 			cannon_2_fire : in std_logic;
+			core_reset : in std_logic;
+			start_init : in std_logic;
 
 			-- output
 			cannon_1_pos_out : out Coordinates;
@@ -288,6 +293,8 @@ begin
 		cannon_2_up => up_2,
 		cannon_2_down => down_2,
 		cannon_2_fire => fire_2,
+		core_reset => core_reset_inner,
+		start_init => start_init_inner,
 
 		cannon_1_pos_out => cannon_pos_1_inner,
 		cannon_2_pos_out => cannon_pos_2_inner,
@@ -312,13 +319,18 @@ begin
 		variable ticks : integer := 0;
 	begin
 		if (rising_edge(game_clk)) then
+			core_reset_inner <= '0';
+			
 			if (game_state = GAME_LOAD) then
 				if (load_progress >= 167696) then
 					game_state := GAME_START;
+					core_reset_inner <= '1';
 				end if;
 			elsif (game_state = GAME_START) then
+				
 				game_cur_time_sec := game_time_sec;
 				if (start_game = '1') then
+					start_init_inner <= '1';
 					game_state := GAME_PLAY;
 					ticks := 0;
 				end if;
@@ -336,8 +348,10 @@ begin
 				if (start_game = '1') then
 					game_state := GAME_PLAY;
 					game_cur_time_sec := game_time_sec;
+					core_reset_inner <= '1';
 				elsif (stop_game = '1') then
 					game_state := GAME_START;
+					core_reset_inner <= '1';
 				end if;
 			end if;
 

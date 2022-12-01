@@ -17,12 +17,14 @@ begin
 	feedback <= not(count_i(14) xor count_i(13));
 	-- LFSR size 4
 
-	process (reset, clk)
+	process (clk)
 	begin
-		if (reset = '1') then
-			count_i <= (others => '0');
-		elsif (rising_edge(clk)) then
-			count_i <= count_i(13 downto 0) & feedback;
+		if (rising_edge(clk)) then
+			if (reset = '1') then
+				count_i <= "101100111010001";
+			else
+				count_i <= count_i(13 downto 0) & feedback;
+			end if;
 		end if;
 	end process;
 	count <= count_i;
