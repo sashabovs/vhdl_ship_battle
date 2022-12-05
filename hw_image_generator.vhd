@@ -135,7 +135,7 @@ begin
 					green_tmp := x"BB";
 					blue_tmp := (others => '0');
 
-					if (row >= screen_h/2 and column >= 0 and row < screen_h/2 + 10 and column < load_progress * screen_w/167696) then
+					if (row >= screen_h/2 and column >= 0 and row < screen_h/2 + 10 and column < load_progress * screen_w/175760) then
 						red_tmp := (others => '0');
 						green_tmp := (others => '1');
 						blue_tmp := (others => '0');

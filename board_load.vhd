@@ -476,7 +476,7 @@ graphic_sram : sram
 		);
 		variable state : card_states := RESET;
 		variable data_addres : integer := 0;
-		variable wait_1 : integer := 500_000_000;
+		variable wait_1 : integer := 0;
 
 		variable write_byte_index : std_logic := '1';
 		variable sram_data_var   : std_logic_vector(15 downto 0);
@@ -540,8 +540,8 @@ graphic_sram : sram
 								sram_action_inner <= SRAM_WRITE;
 								sram_data_in_inner <= sram_data_var;
 
-								-- total bytes 335392/2=167696
-								if (data_addres > 167696) then
+								-- total bytes 351 520/2=175 760
+								if (data_addres > 175760) then
 									continue_inner <= '0';
 									rd_inner <= '0';
 								end if;

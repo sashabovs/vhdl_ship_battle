@@ -153,7 +153,7 @@ architecture a1 of main is
 			load_progress : in integer;
 
 			game_time : integer;
-			game_state: GameStates;
+			game_state : GameStates;
 
 			-- output
 			sram_addres_read : out std_logic_vector(19 downto 0);
@@ -317,21 +317,23 @@ begin
 		variable game_time_sec : integer := 60;
 		variable ticks_in_sec : integer := 50_000_000;
 		variable ticks : integer := 0;
+
+		variable sleep : integer := 0;
 	begin
 		if (rising_edge(game_clk)) then
 			core_reset_inner <= '0';
-			
+
 			if (game_state = GAME_LOAD) then
-				if (load_progress >= 167696) then
+				if (load_progress >= 175760) then
 					game_state := GAME_START;
-					
+
 				end if;
 			elsif (game_state = GAME_START) then
 				game_cur_time_sec := game_time_sec;
 				if (start_game = '1') then
 					start_init_inner <= '1';
 					core_reset_inner <= '1';
-					
+
 					game_state := GAME_PLAY;
 					ticks := 0;
 				end if;
@@ -346,14 +348,19 @@ begin
 					end if;
 				end if;
 			elsif (game_state = GAME_END) then
-				if (start_game = '1') then
-					game_state := GAME_PLAY;
-					game_cur_time_sec := game_time_sec;
-					core_reset_inner <= '1';
-				elsif (stop_game = '1') then
-					game_state := GAME_START;
-					core_reset_inner <= '1';
+				if (sleep > ticks_in_sec) then
+					if (start_game = '1') then
+						game_state := GAME_PLAY;
+						game_cur_time_sec := game_time_sec;
+						core_reset_inner <= '1';
+						sleep := 0;
+					elsif (stop_game = '1') then
+						game_state := GAME_START;
+						core_reset_inner <= '1';
+						sleep := 0;
+					end if;
 				end if;
+				sleep := sleep + 1;
 			end if;
 
 			game_time_inner <= game_cur_time_sec;

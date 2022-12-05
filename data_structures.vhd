@@ -95,7 +95,7 @@ package DataStructures is
 	constant letter_size : Coordinates := (x => 12, y => 14);
 
 	constant font_start_byte : integer := 5908;
-	constant font_row_size_byte : integer := 1152;
+	constant font_row_size_byte : integer := 2304;
 
 	type LetterStartArray is array(0 to 127) of integer;
 	function GenerateLetterStart return LetterStartArray;
@@ -151,8 +151,8 @@ package body DataStructures is
 		temp_text.array_of_letters := input_text;
 
 		for i in input_text'range loop
-			temp_text.ranges_x(i).start_pos := position.x + (i - 1) * (letter_size.x + 3);
-			temp_text.ranges_x(i).end_pos := position.x + (i - 1) * (letter_size.x + 3) + letter_size.x;
+			temp_text.ranges_x(i).start_pos := position.x + (i - 1) * (letter_size.x + 5);
+			temp_text.ranges_x(i).end_pos := position.x + (i - 1) * (letter_size.x + 5) + letter_size.x;
 		end loop;
 
 		return temp_text;
@@ -262,20 +262,22 @@ package body DataStructures is
 				letter_pos_left_top := (x => all_texts(text_i).ranges_x(i).start_pos, y => all_texts(text_i).range_y.start_pos);
 				letter_pos_right_bottom := (x => all_texts(text_i).ranges_x(i).end_pos, y => all_texts(text_i).range_y.end_pos);
 				if (row >= letter_pos_left_top.y and column >= letter_pos_left_top.x and row < letter_pos_right_bottom.y and column <= letter_pos_right_bottom.x) then
+					ship_array_index := (font_start_byte + font_row_start_pos_y(row - letter_pos_left_top.y) + (column - letter_pos_left_top.x + font_letter_start_pos_x(cur_char_font_num + time_digits_array(text_i)(i)))*2) / 2;
 
-					ship_array_index := (font_start_byte + font_row_start_pos_y(row - letter_pos_left_top.y) + column - letter_pos_left_top.x + font_letter_start_pos_x(cur_char_font_num + time_digits_array(text_i)(i))) / 2;
-					if ((column - letter_pos_left_top.x) mod 2 = 0) then
-						if (data(15 downto 8) = x"01") then
-							red_tmp := x"00";
-							green_tmp := x"00";
-							blue_tmp := x"00";
-						end if;
-					else
-						if (data(7 downto 0) = x"01") then
-							red_tmp := x"00";
-							green_tmp := x"00";
-							blue_tmp := x"00";
-						end if;
+					if (column /= letter_pos_left_top.x) then
+						--if ((column - letter_pos_left_top.x) mod 2 = 0) then
+							if (data(15 downto 8) = x"01") then
+								red_tmp := x"00";
+								green_tmp := x"00";
+								blue_tmp := x"00";
+							end if;
+						--lse
+							-- if (data(7 downto 0) = x"01") then
+							-- 	red_tmp := x"00";
+							-- 	green_tmp := x"00";
+							-- 	blue_tmp := x"00";
+							-- end if;
+						--end if;
 					end if;
 					res := (color_vector => red_tmp & green_tmp & blue_tmp, memory_data_index => ship_array_index);
 				end if;
@@ -283,8 +285,6 @@ package body DataStructures is
 		end loop;
 		return res;
 	end function;
-
-	
 	function PrintAllLetters(
 		column : integer;
 		row : integer;
@@ -304,20 +304,20 @@ package body DataStructures is
 					blue_tmp := x"00";
 					green_tmp := x"00";
 					red_tmp := x"00";
-				-- elsif (data(15 downto 8) = x"00") then
-				-- 	blue_tmp := x"FF";
-				-- 	green_tmp := x"FF";
-				-- 	red_tmp := x"FF";
+					-- elsif (data(15 downto 8) = x"00") then
+					-- 	blue_tmp := x"FF";
+					-- 	green_tmp := x"FF";
+					-- 	red_tmp := x"FF";
 				end if;
 			else
 				if (data(7 downto 0) = x"01") then
 					blue_tmp := x"00";
 					green_tmp := x"00";
 					red_tmp := x"00";
-				-- elsif (data(7 downto 0) = x"00") then
-				-- 	blue_tmp := x"FF";
-				-- 	green_tmp := x"FF";
-				-- 	red_tmp := x"FF";
+					-- elsif (data(7 downto 0) = x"00") then
+					-- 	blue_tmp := x"FF";
+					-- 	green_tmp := x"FF";
+					-- 	red_tmp := x"FF";
 				end if;
 			end if;
 		elsif (row < 56) then
@@ -327,20 +327,20 @@ package body DataStructures is
 					blue_tmp := x"00";
 					green_tmp := x"00";
 					red_tmp := x"00";
-				-- elsif (data(15 downto 8) = x"00") then
-				-- 	blue_tmp := x"FF";
-				-- 	green_tmp := x"FF";
-				-- 	red_tmp := x"FF";
+					-- elsif (data(15 downto 8) = x"00") then
+					-- 	blue_tmp := x"FF";
+					-- 	green_tmp := x"FF";
+					-- 	red_tmp := x"FF";
 				end if;
 			else
 				if (data(7 downto 0) = x"01") then
 					blue_tmp := x"00";
 					green_tmp := x"00";
 					red_tmp := x"00";
-				-- elsif (data(7 downto 0) = x"00") then
-				-- 	blue_tmp := x"FF";
-				-- 	green_tmp := x"FF";
-				-- 	red_tmp := x"FF";
+					-- elsif (data(7 downto 0) = x"00") then
+					-- 	blue_tmp := x"FF";
+					-- 	green_tmp := x"FF";
+					-- 	red_tmp := x"FF";
 				end if;
 			end if;
 
@@ -351,20 +351,20 @@ package body DataStructures is
 					blue_tmp := x"00";
 					green_tmp := x"00";
 					red_tmp := x"00";
-				-- elsif (data(15 downto 8) = x"00") then
-				-- 	blue_tmp := x"FF";
-				-- 	green_tmp := x"FF";
-				-- 	red_tmp := x"FF";
+					-- elsif (data(15 downto 8) = x"00") then
+					-- 	blue_tmp := x"FF";
+					-- 	green_tmp := x"FF";
+					-- 	red_tmp := x"FF";
 				end if;
 			else
 				if (data(7 downto 0) = x"01") then
 					blue_tmp := x"00";
 					green_tmp := x"00";
 					red_tmp := x"00";
-				-- elsif (data(7 downto 0) = x"00") then
-				-- 	blue_tmp := x"FF";
-				-- 	green_tmp := x"FF";
-				-- 	red_tmp := x"FF";
+					-- elsif (data(7 downto 0) = x"00") then
+					-- 	blue_tmp := x"FF";
+					-- 	green_tmp := x"FF";
+					-- 	red_tmp := x"FF";
 				end if;
 			end if;
 		end if;
