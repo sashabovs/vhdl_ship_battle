@@ -8,6 +8,7 @@ library work;
 use work.CommonPckg.all;
 use work.SdCardPckg.all;
 use work.DataStructures.all;
+use work.SramHelper.all;
 
 entity board_load is
 	port (
@@ -89,7 +90,7 @@ architecture a1 of board_load is
 	signal graphic_memory_write_address_inner : integer range 0 to 1300;
 	-- signal graphic_memory_we_inner : std_logic := '0';
 
-	signal sram_action_inner : std_logic := '0';
+	signal sram_action_inner : SramStates := SRAM_OFF;
 
 	signal sram_data_in_inner   : std_logic_vector(15 downto 0);
 	signal sram_data_out_inner    :  std_logic_vector(15 downto 0); -- data out
@@ -159,7 +160,7 @@ architecture a1 of board_load is
 		ADDR_READ			: in std_logic_vector(19 downto 0); -- address in
 		ADDR_WRITE			: in std_logic_vector(19 downto 0); -- address in
 		
-		ACTION		: in std_logic; -- operation to perform
+		ACTION		: in SramStates; -- operation to perform
 		
 		SRAM_ADDR	: out std_logic_vector(19 downto 0); -- address out
 		SRAM_DQ     : inout std_logic_vector(15 downto 0); -- data in/out
@@ -475,16 +476,17 @@ graphic_sram : sram
 		);
 		variable state : card_states := RESET;
 		variable data_addres : integer := 0;
-		variable wait_1 : integer := 0;
+		variable wait_1 : integer := 500_000_000;
 
-		variable write_color : std_logic := '1';
+		variable write_byte_index : std_logic := '1';
+		variable sram_data_var   : std_logic_vector(15 downto 0);
 	begin
 		if (rising_edge(game_clk)) then
 			if (wait_1 > 0) then
 				wait_1 := wait_1 - 1;
 			else
 				--wait_1 := 25_000_000;
-				 wait_1 := 1000;
+				 wait_1 := 0;
 				-- initialization
 				if (state = RESET) then
 					reset_inner <= '1';
@@ -526,16 +528,17 @@ graphic_sram : sram
 
 					else
 						if (hndShk_o_inner = '1') then
-							if (write_color = '1') then
+							if (write_byte_index = '1') then
 								--graphic_memory_write_address_inner <= data_addres;
 								--graphic_memory_we_inner <= '1';
 								-- graphic_memory_data_inner <= data_o_inner;
-								
-								sram_data_in_inner(15 downto 8) <= graphic_memory_data_inner; 
+								sram_action_inner <= SRAM_OFF;
+								sram_data_var(15 downto 8) := graphic_memory_data_inner; 
 							else
 								sram_addres_write_inner	<= std_logic_vector(to_unsigned(data_addres, 20));
-								sram_data_in_inner(7 downto 0) <= graphic_memory_data_inner;
-								sram_action_inner <= '1';
+								sram_data_var(7 downto 0) := graphic_memory_data_inner;
+								sram_action_inner <= SRAM_WRITE;
+								sram_data_in_inner <= sram_data_var;
 
 								-- total bytes 335392/2=167696
 								if (data_addres > 167696) then
@@ -546,7 +549,7 @@ graphic_sram : sram
 								data_addres := data_addres + 1;
 								load_progress_inner <= data_addres;
 							end if;
-							write_color := not write_color;
+							write_byte_index := not write_byte_index;
 
 							hndShk_i_inner <= '1';
 							state := WAIT_FOR_HNDSHK_DOWN;
@@ -559,7 +562,7 @@ graphic_sram : sram
 					end if;
 				elsif (state = READ_END) then
 					-- graphic_memory_we_inner <= '0';
-					sram_action_inner <= '0';
+					sram_action_inner <= SRAM_READ;
 					-- END
 				end if;
 			end if;

@@ -324,13 +324,14 @@ begin
 			if (game_state = GAME_LOAD) then
 				if (load_progress >= 167696) then
 					game_state := GAME_START;
-					core_reset_inner <= '1';
+					
 				end if;
 			elsif (game_state = GAME_START) then
-				
 				game_cur_time_sec := game_time_sec;
 				if (start_game = '1') then
 					start_init_inner <= '1';
+					core_reset_inner <= '1';
+					
 					game_state := GAME_PLAY;
 					ticks := 0;
 				end if;
