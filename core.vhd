@@ -14,7 +14,7 @@ entity core is
 	);
 	port (
 		-- input
-		pixel_clk : in std_logic;
+		-- pixel_clk : in std_logic;
 		clk : in std_logic;
 		cannon_1_up : in std_logic;
 		cannon_1_down : in std_logic;
@@ -23,6 +23,7 @@ entity core is
 		cannon_2_down : in std_logic;
 		cannon_2_fire : in std_logic;
 		core_reset : in std_logic;
+		queue_reset : in std_logic;
 		start_init : in std_logic;
 
 		-- output
@@ -85,7 +86,7 @@ architecture a1 of core is
 			push_enabled : in std_logic; --enable write,should be '0' when not in use.
 			data_in : in Coordinates; --input data
 
-			core_reset : in std_logic;
+			queue_reset : in std_logic;
 			-- output
 			--data_out : out Coordinates; --output data
 			data_top : out Coordinates;
@@ -184,7 +185,7 @@ begin
 		clk => clk,
 		--clk => pixel_clk,
 
-		core_reset => core_reset,
+		queue_reset => queue_reset,
 		pop_enabled => shells_1_remove_top, --enable read,should be '0' when not in use.
 		push_enabled => cannon_1_fire_inner, --enable write,should be '0' when not in use.
 		data_in => cannon_1_pos_inner, --input data
@@ -207,7 +208,7 @@ begin
 		clk => clk,
 		--clk => pixel_clk,
 
-		core_reset => core_reset,
+		queue_reset => queue_reset,
 		pop_enabled => shells_2_remove_top, --enable read,should be '0' when not in use.
 		push_enabled => cannon_2_fire_inner, --enable write,should be '0' when not in use.
 		data_in => cannon_2_pos_inner, --input data

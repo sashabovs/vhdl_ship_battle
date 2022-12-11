@@ -60,6 +60,10 @@ entity main is
 end main;
 
 architecture a1 of main is
+
+	
+
+
 	signal disp_ena_inner : std_logic; --display enable ('1' = display time, '0' = blanking time)
 	signal column_inner : integer; --horizontal pixel coordinate
 	signal row_inner : integer; --vertical pixel coordinate
@@ -96,6 +100,7 @@ architecture a1 of main is
 	signal game_state_inner : GameStates;
 
 	signal core_reset_inner : std_logic := '0';
+	signal queue_reset_inner : std_logic := '0';
 	signal start_init_inner : std_logic := '0';
 
 	component vga_controller is
@@ -180,7 +185,7 @@ architecture a1 of main is
 		);
 		port (
 			-- input
-			pixel_clk : in std_logic;
+			-- pixel_clk : in std_logic;
 			clk : in std_logic;
 			cannon_1_up : in std_logic;
 			cannon_1_down : in std_logic;
@@ -189,6 +194,7 @@ architecture a1 of main is
 			cannon_2_down : in std_logic;
 			cannon_2_fire : in std_logic;
 			core_reset : in std_logic;
+			queue_reset : in std_logic;
 			start_init : in std_logic;
 
 			-- output
@@ -296,7 +302,7 @@ begin
 		screen_h => screen_h
 	)
 	port map(
-		pixel_clk => pixel_clk,
+		-- pixel_clk => pixel_clk,
 		clk => game_clk,
 		cannon_1_up => up_1,
 		cannon_1_down => down_1,
@@ -305,6 +311,7 @@ begin
 		cannon_2_down => down_2,
 		cannon_2_fire => fire_2,
 		core_reset => core_reset_inner,
+		queue_reset => queue_reset_inner,
 		start_init => start_init_inner,
 
 		cannon_1_pos_out => cannon_pos_1_inner,
@@ -337,7 +344,9 @@ begin
 		variable sleep : integer := 0;
 	begin
 		if (rising_edge(game_clk)) then
+
 			core_reset_inner <= '0';
+			queue_reset_inner <= '0';
 
 			if (game_state = GAME_LOAD) then
 				if (load_progress >= 175760) then
@@ -348,6 +357,7 @@ begin
 				game_cur_time_sec := game_time_sec;
 				if (start_game = '1') then
 					core_reset_inner <= '1';
+					queue_reset_inner <= '1';
 
 					game_state := WAIT_FOR_GAME;
 					ticks := 0;
@@ -361,10 +371,13 @@ begin
 				end if;
 				sleep := sleep + 1;
 			elsif (game_state = GAME_PLAY) then
+
+			
+
 				if (game_cur_time_sec <= 0) then
 					game_state := GAME_END;
 
-					
+
 				else
 					ticks := ticks + 1;
 					if (ticks = ticks_in_sec) then
@@ -373,6 +386,8 @@ begin
 					end if;
 				end if;
 			elsif (game_state = GAME_END) then
+				queue_reset_inner <= '1';
+
 				if (sleep > ticks_in_sec) then
 					if (start_game = '1') then
 						game_state := GAME_PLAY;

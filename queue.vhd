@@ -16,7 +16,7 @@ entity queue is
 	port (
 		-- input
 		clk : in std_logic;
-		core_reset : in std_logic;
+		queue_reset : in std_logic;
 		pop_enabled : in std_logic; --enable read,should be '0' when not in use.
 		push_enabled : in std_logic; --enable write,should be '0' when not in use.
 		data_in : in Coordinates; --input data
@@ -45,7 +45,7 @@ begin
 	begin
 		if (rising_edge(clk)) then
 
-			if (core_reset = '1') then
+			if (queue_reset = '1') then
 
 				for i in memory'range loop
 					memory(i).enabled <= '0';
