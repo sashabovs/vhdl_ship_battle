@@ -140,7 +140,7 @@ begin
 						green_tmp := (others => '1');
 						blue_tmp := (others => '0');
 					end if;
-				elsif (game_state = GAME_START) then
+				elsif (game_state = GAME_START or game_state = WAIT_FOR_GAME) then
 
 					-- red_tmp := (others => '1');
 					-- green_tmp := (others => '1');

@@ -1,5 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+use work.sine_package.all;
 
 package DataStructures is
 	type Coordinates is record
@@ -116,6 +119,7 @@ package DataStructures is
 	type GameStates is (
 		GAME_LOAD,
 		GAME_START,
+		WAIT_FOR_GAME,
 		GAME_PLAY,
 		GAME_END
 	);
@@ -135,6 +139,44 @@ package DataStructures is
 		time_digits_array : DigitsArray;
 		initial_color : ColorVector
 	) return PrintTextResult;
+
+	type AudioTypeForFire is record
+		sleep : integer;
+		sleep_sec : integer;
+		sleep_cur : integer;
+		v_tstep : integer;
+		quarter_num : std_logic;
+		quarter_sign : integer;
+
+		
+		temp_out : signed(15 downto 0);
+
+		finished : std_logic;
+	end record;
+
+	type AudioTypeForExplosion is record
+	sleep : integer;
+	sleep_sec : integer;
+	sleep_cur : integer;
+	v_tstep : integer;
+	quarter_num : std_logic;
+	quarter_sign : integer;
+	stage : integer;
+	ampl_mult : integer;
+	ampl_div : integer;
+	
+	temp_out : signed(15 downto 0);
+
+	finished : std_logic;
+end record;
+
+	function PlayFireSound(
+		data_in : AudioTypeForFire
+	) return AudioTypeForFire;
+
+	function PlayExplosionSound(
+		data_in : AudioTypeForExplosion
+	) return AudioTypeForExplosion;
 
 end package DataStructures;
 
@@ -262,21 +304,21 @@ package body DataStructures is
 				letter_pos_left_top := (x => all_texts(text_i).ranges_x(i).start_pos, y => all_texts(text_i).range_y.start_pos);
 				letter_pos_right_bottom := (x => all_texts(text_i).ranges_x(i).end_pos, y => all_texts(text_i).range_y.end_pos);
 				if (row >= letter_pos_left_top.y and column >= letter_pos_left_top.x and row < letter_pos_right_bottom.y and column <= letter_pos_right_bottom.x) then
-					ship_array_index := (font_start_byte + font_row_start_pos_y(row - letter_pos_left_top.y) + (column - letter_pos_left_top.x + font_letter_start_pos_x(cur_char_font_num + time_digits_array(text_i)(i)))*2) / 2;
+					ship_array_index := (font_start_byte + font_row_start_pos_y(row - letter_pos_left_top.y) + (column - letter_pos_left_top.x + font_letter_start_pos_x(cur_char_font_num + time_digits_array(text_i)(i))) * 2) / 2;
 
 					if (column /= letter_pos_left_top.x) then
 						--if ((column - letter_pos_left_top.x) mod 2 = 0) then
-							if (data(15 downto 8) = x"01") then
-								red_tmp := x"00";
-								green_tmp := x"00";
-								blue_tmp := x"00";
-							end if;
+						if (data(15 downto 8) = x"01") then
+							red_tmp := x"00";
+							green_tmp := x"00";
+							blue_tmp := x"00";
+						end if;
 						--lse
-							-- if (data(7 downto 0) = x"01") then
-							-- 	red_tmp := x"00";
-							-- 	green_tmp := x"00";
-							-- 	blue_tmp := x"00";
-							-- end if;
+						-- if (data(7 downto 0) = x"01") then
+						-- 	red_tmp := x"00";
+						-- 	green_tmp := x"00";
+						-- 	blue_tmp := x"00";
+						-- end if;
 						--end if;
 					end if;
 					res := (color_vector => red_tmp & green_tmp & blue_tmp, memory_data_index => ship_array_index);
@@ -369,6 +411,151 @@ package body DataStructures is
 			end if;
 		end if;
 		return res;
+	end function;
+	
+	function PlayFireSound(
+		data_in : AudioTypeForFire
+	) return AudioTypeForFire is
+		variable data : AudioTypeForFire;
+	begin
+		data := data_in;
+
+		if (data.sleep_sec > 0) then
+			data.sleep_sec := data.sleep_sec - 1;
+		else
+			data.sleep_sec := 50_000;
+			data.sleep := data.sleep + 10;
+			if (data.sleep > 800) then
+				data.sleep := 100;
+				-- finish---
+				data.finished := '1';
+			end if;
+
+		end if;
+
+		if (data.sleep_cur > 0) then
+			data.sleep_cur := data.sleep_cur - 1;
+
+		else
+			data.sleep_cur := data.sleep;
+
+			if (data.quarter_num = '0') then
+
+				data.temp_out := to_signed(data.quarter_sign * get_table_value(data.v_tstep) * 256, 16);
+
+			else
+				data.temp_out := to_signed(data.quarter_sign * get_table_value(max_table_index - data.v_tstep) * 256, 16);
+
+			end if;
+
+			data.v_tstep := data.v_tstep + 1;
+			if (data.v_tstep >= 128) then
+				data.v_tstep := 0;
+				data.quarter_num := not data.quarter_num;
+				if (data.quarter_num = '1') then
+					data.quarter_sign := - data.quarter_sign;
+				end if;
+			end if;
+
+		end if;
+
+		return data;
+	end function;
+
+	function PlayExplosionSound(
+		data_in : AudioTypeForExplosion
+	) return AudioTypeForExplosion is
+		variable data : AudioTypeForExplosion;
+	begin
+		data := data_in;
+		if (data.sleep_sec > 0) then
+			data.sleep_sec := data.sleep_sec - 1;
+		else
+
+			if (data.stage = 0) then
+				data.sleep_sec := 50_000;
+				data.sleep := data.sleep + 10;
+				data.ampl_mult := 10;
+				data.ampl_div := 1;
+
+				if (data.sleep > 1100) then
+					data.stage := 1;
+				end if;
+
+			elsif (data.stage = 1) then
+				data.sleep_sec := 50_000;
+				data.sleep := data.sleep - 10;
+				data.ampl_mult := 4;
+				data.ampl_div := 1;
+
+				if (data.sleep < 700) then
+					data.stage := 2;
+				end if;
+
+			elsif (data.stage = 2) then
+				data.sleep_sec := 50_000;
+				data.sleep := data.sleep + 10;
+				data.ampl_mult := 8;
+				data.ampl_div := 1;
+
+				if (data.sleep > 900) then
+					data.stage := 3;
+				end if;
+
+			elsif (data.stage = 3) then
+				data.sleep_sec := 50_000;
+				data.sleep := data.sleep - 10;
+				data.ampl_mult := 6;
+				data.ampl_div := 1;
+
+				if (data.sleep < 600) then
+					data.stage := 4;
+				end if;
+
+			elsif (data.stage = 4) then
+				data.sleep_sec := 50_000;
+				data.sleep := data.sleep + 10;
+				data.ampl_mult := 3;
+				data.ampl_div := 1;
+
+				if (data.sleep > 2100) then
+					data.stage := 5;
+				end if;
+
+			else
+				----stop-----
+				data.sleep := 100;
+				data.finished := '1';
+				data.stage := 0;
+			end if;
+		end if;
+
+		if (data.sleep_cur > 0) then
+			data.sleep_cur := data.sleep_cur - 1;
+
+		else
+			data.sleep_cur := data.sleep;
+
+			if (data.quarter_num = '0') then
+
+				data.temp_out := to_signed(data.quarter_sign * 2560 * data.ampl_mult / data.ampl_div, 16);
+
+			else
+				data.temp_out := to_signed(data.quarter_sign * 2560 * data.ampl_mult / data.ampl_div, 16);
+
+			end if;
+			data.v_tstep := data.v_tstep + 1;
+			if (data.v_tstep >= 128) then
+				data.v_tstep := 0;
+				data.quarter_num := not data.quarter_num;
+				if (data.quarter_num = '1') then
+					data.quarter_sign := - data.quarter_sign;
+				end if;
+			end if;
+
+		end if;
+
+		return data;
 	end function;
 
 end package body DataStructures;

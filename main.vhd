@@ -49,7 +49,13 @@ entity main is
 		disp_ena : out std_logic;
 
 		sram_addres_read : out std_logic_vector(19 downto 0);
-		LED : out std_logic_vector(7 downto 0)
+		LED : out std_logic_vector(7 downto 0);
+
+
+		audio_play_explosion_1 : out std_logic;
+		audio_play_explosion_2 : out std_logic;
+		audio_play_fire_1 : out std_logic;
+		audio_play_fire_2 : out std_logic
 	);
 end main;
 
@@ -197,7 +203,12 @@ architecture a1 of main is
 			score_2 : out integer;
 
 			first_border_coord : out Coordinates;
-			second_border_coord : out Coordinates
+			second_border_coord : out Coordinates;
+
+			audio_play_explosion_1 : out std_logic;
+			audio_play_explosion_2 : out std_logic;
+			audio_play_fire_1 : out std_logic;
+			audio_play_fire_2 : out std_logic
 		);
 	end component;
 
@@ -307,7 +318,12 @@ begin
 		score_2 => score_2_inner,
 
 		first_border_coord => first_border_coord_inner,
-		second_border_coord => second_border_coord_inner
+		second_border_coord => second_border_coord_inner,
+
+		audio_play_explosion_1 => audio_play_explosion_1,
+		audio_play_explosion_2 => audio_play_explosion_2,
+		audio_play_fire_1 => audio_play_fire_1,
+		audio_play_fire_2 => audio_play_fire_2
 	);
 
 	process (game_clk)
@@ -331,15 +347,24 @@ begin
 			elsif (game_state = GAME_START) then
 				game_cur_time_sec := game_time_sec;
 				if (start_game = '1') then
-					start_init_inner <= '1';
 					core_reset_inner <= '1';
 
-					game_state := GAME_PLAY;
+					game_state := WAIT_FOR_GAME;
 					ticks := 0;
 				end if;
+			elsif (game_state = WAIT_FOR_GAME) then
+				if (sleep > ticks_in_sec) then
+					start_init_inner <= '1';
+
+					game_state := GAME_PLAY;
+					sleep := 0;
+				end if;
+				sleep := sleep + 1;
 			elsif (game_state = GAME_PLAY) then
 				if (game_cur_time_sec <= 0) then
 					game_state := GAME_END;
+
+					
 				else
 					ticks := ticks + 1;
 					if (ticks = ticks_in_sec) then

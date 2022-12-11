@@ -79,8 +79,9 @@ begin
 				if (empty = '0') then
 					data_top <= memory(readptr).cord;
 				else
-					data_top <= (x => - 1, y => - 1);
+					data_top <= (x => 400, y => - 1);
 				end if;
+
 				if (pop_enabled = '1' and empty = '0') then --read
 					--data_out <= memory(readptr).cord;
 					memory(readptr).enabled <= '0';

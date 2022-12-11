@@ -37,7 +37,13 @@ entity core is
 		score_2 : out integer;
 
 		first_border_coord : out Coordinates;
-		second_border_coord : out Coordinates
+		second_border_coord : out Coordinates;
+
+
+		audio_play_explosion_1 : out std_logic;
+		audio_play_explosion_2 : out std_logic;
+		audio_play_fire_1 : out std_logic;
+		audio_play_fire_2 : out std_logic
 	);
 end core;
 
@@ -371,4 +377,11 @@ begin
 	cannon_2_pos_out <= cannon_2_pos_inner;
 	ships_1_out <= ships_1_inner;
 	ships_2_out <= ships_2_inner;
+
+	audio_play_explosion_1 <= shells_1_remove_top;
+	audio_play_explosion_2 <= shells_2_remove_top;
+
+
+	audio_play_fire_1 <= cannon_1_fire_inner;
+	audio_play_fire_2 <= cannon_2_fire_inner;
 end a1;

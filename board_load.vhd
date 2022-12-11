@@ -58,7 +58,24 @@ entity board_load is
 		SRAM_OE_N   : out std_logic; -- output enable
 		SRAM_WE_N   : out std_logic; -- write enable
 		SRAM_UB_N   : out std_logic; -- upper byte mask
-		SRAM_LB_N   : out std_logic -- lower byte mask
+		SRAM_LB_N   : out std_logic; -- lower byte mask
+
+
+		-------------------AUDIO-------------------------------
+
+			----------WM8731 pins-----
+			AUD_BCLK : out std_logic;
+			AUD_XCK : out std_logic;
+			AUD_ADCLRCK : out std_logic;
+			AUD_ADCDAT : in std_logic;
+			AUD_DACLRCK : out std_logic;
+			AUD_DACDAT : out std_logic;
+	
+
+	
+			FPGA_I2C_SCLK : out std_logic;
+			FPGA_I2C_SDAT : inout std_logic
+
 
 	);
 end board_load;
@@ -70,7 +87,7 @@ architecture a1 of board_load is
 	signal vga_clk_inner : std_logic;
 
 	signal sram_clk_inner : std_logic;
-	signal game_clk_inner : std_logic;
+	signal audio_clk_inner : std_logic;
 	
 	-- sram
 	signal rd_inner : std_logic;
@@ -98,6 +115,11 @@ architecture a1 of board_load is
 	signal sram_addres_read_inner			:  std_logic_vector(19 downto 0); -- address in
 
 	signal load_progress_inner : integer := 0;
+
+	signal audio_play_explosion_1_inner :  std_logic;
+	signal audio_play_explosion_2_inner :  std_logic;
+	signal audio_play_fire_1_inner :  std_logic;
+	signal audio_play_fire_2_inner :  std_logic;
 	
 
 	--signal disp_ena_test : std_logic := '0';
@@ -221,8 +243,46 @@ architecture a1 of board_load is
 			disp_ena : out std_logic;
 	
 			sram_addres_read	: out std_logic_vector(19 downto 0);
-			LED : out std_logic_vector(7 downto 0)
+			LED : out std_logic_vector(7 downto 0);
+
+			audio_play_explosion_1 : out std_logic;
+			audio_play_explosion_2 : out std_logic;
+			audio_play_fire_1 : out std_logic;
+			audio_play_fire_2 : out std_logic
 		);
+	end component;
+
+
+	component audio_codec is
+		port (
+			----------WM8731 pins-----
+			AUD_BCLK : out std_logic;
+			AUD_XCK : out std_logic;
+			AUD_ADCLRCK : out std_logic;
+			AUD_ADCDAT : in std_logic;
+			AUD_DACLRCK : out std_logic;
+			AUD_DACDAT : out std_logic;
+	
+			---------FPGA pins-----
+	
+			clock_12pll : in std_logic;
+			clock_50 : in std_logic;
+			reset : in std_logic;
+	
+	
+	
+	
+			FPGA_I2C_SCLK : out std_logic;
+			FPGA_I2C_SDAT : inout std_logic;
+	
+	
+			audio_play_fire_1 : in std_logic;
+			audio_play_fire_2 : in std_logic;
+			audio_play_explosion_1 : in std_logic;
+			audio_play_explosion_2 : in std_logic
+
+		);
+	
 	end component;
 
 	component altpll0 is
@@ -308,7 +368,12 @@ begin
 
 		sram_addres_read => sram_addres_read_inner,
 
-		LED => LED
+		LED => LED,
+
+		audio_play_explosion_1 => audio_play_explosion_1_inner,
+		audio_play_explosion_2 => audio_play_explosion_2_inner,
+		audio_play_fire_1 => audio_play_fire_1_inner,
+		audio_play_fire_2 => audio_play_fire_2_inner
 	);
 
 	altpll0_vga : altpll0 port map(
@@ -316,9 +381,41 @@ begin
 		inclk0 => game_clk,
 		c0 => vga_clk_inner,
 		c1 => sram_clk_inner,
-		c2 => game_clk_inner
+		c2 => audio_clk_inner
 
 	);
+
+	audio: audio_codec 
+		port map(
+			----------WM8731 pins-----
+			AUD_BCLK => AUD_BCLK,
+			AUD_XCK => AUD_XCK,
+			AUD_ADCLRCK => AUD_ADCLRCK,
+			AUD_ADCDAT => AUD_ADCDAT,
+			AUD_DACLRCK => AUD_DACLRCK,
+			AUD_DACDAT =>AUD_DACDAT,
+	
+			---------FPGA pins-----
+	
+			clock_12pll => audio_clk_inner,
+			clock_50 => game_clk,
+			reset => '0',
+	
+	
+	
+	
+			FPGA_I2C_SCLK => FPGA_I2C_SCLK,
+			FPGA_I2C_SDAT => FPGA_I2C_SDAT,
+	
+	
+			audio_play_explosion_1 => audio_play_explosion_1_inner,
+			audio_play_explosion_2 => audio_play_explosion_2_inner,
+			audio_play_fire_1 => audio_play_fire_1_inner,
+			audio_play_fire_2 => audio_play_fire_2_inner
+	
+		);
+	
+
 
 	sd_card : SdCardCtrl
 	generic map(
@@ -476,7 +573,7 @@ graphic_sram : sram
 		);
 		variable state : card_states := RESET;
 		variable data_addres : integer := 0;
-		variable wait_1 : integer := 0;
+		variable wait_1 : integer := 1000;
 
 		variable write_byte_index : std_logic := '1';
 		variable sram_data_var   : std_logic_vector(15 downto 0);
@@ -491,7 +588,7 @@ graphic_sram : sram
 				if (state = RESET) then
 					reset_inner <= '1';
 					state := WAIT_FOR_RESET_STARTS;
-					wait_1 := 0;
+					wait_1 := 1000;
 				elsif (state = WAIT_FOR_RESET_STARTS) then
 					reset_inner <= '0';
 					if (busy_o_inner = '1') then
