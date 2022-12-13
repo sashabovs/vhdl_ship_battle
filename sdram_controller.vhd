@@ -61,7 +61,7 @@ entity sdram_controller is
 	--wishbone
 	addr_i 		: in std_logic_vector(22 downto 0);
 	dat_i 		: in std_logic_vector(31 downto 0);
-   dat_o 		: out std_logic_vector(31 downto 0);
+    dat_o 		: out std_logic_vector(31 downto 0);
 	we_i 			: in std_logic;
 	ack_o 		: out std_logic;
 	stb_i			: in std_logic;

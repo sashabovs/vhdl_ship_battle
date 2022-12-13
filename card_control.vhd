@@ -144,9 +144,9 @@ package SdCardPckg is
       cs_bo      : out std_logic                     := HI;  -- Active-low chip-select.
       sclk_o     : out std_logic                     := LO;  -- Serial clock to SD card.
       mosi_o     : out std_logic                     := HI;  -- Serial data output to SD card.
-      miso_i     : in  std_logic                     := ZERO;  -- Serial data input from SD card.
+      miso_i     : in  std_logic                     := ZERO  -- Serial data input from SD card.
 
-	  LED_card_control : out std_logic_vector(7 downto 0)
+
       );
   end component;
 
@@ -189,9 +189,8 @@ entity SdCardCtrl is
 		cs_bo : out std_logic := HI; -- Active-low chip-select.
 		sclk_o : out std_logic := LO; -- Serial clock to SD card.
 		mosi_o : out std_logic := HI; -- Serial data output to SD card.
-		miso_i : in std_logic := ZERO; -- Serial data input from SD card.
+		miso_i : in std_logic := ZERO -- Serial data input from SD card.
 
-		LED_card_control : out std_logic_vector(7 downto 0)
 	);
 end entity;
 
@@ -605,9 +604,7 @@ begin
 						state_v := START_INIT;
 				end case;
 			end if;
-		end if;
-
-		LED_card_control <= std_logic_vector(to_unsigned(FsmState_t'pos(state_v) + 1, 8));					
+		end if;				
 	end process;
 
 	sclk_o <= sclk_r; -- Output the generated SPI clock for the SD card.

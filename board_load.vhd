@@ -42,41 +42,26 @@ entity board_load is
 		mosi_o : out std_logic; -- Serial data output to SD card.
 		miso_i : in std_logic; -- Serial data input from SD card.
 
-		-- LCD bus
-		LCD_RS : out std_logic;
-		LCD_E : out std_logic;
-		LCD_RW : out std_logic;
-		LCD_Data : inout std_logic_vector(7 downto 0);
-		LED_card_control : out std_logic_vector(7 downto 0);
-		LED : out std_logic_vector(7 downto 0);
-
-
--------------------sram-----------------------------
-		SRAM_ADDR	: out std_logic_vector(19 downto 0); -- address out
-		SRAM_DQ     : inout std_logic_vector(15 downto 0); -- data in/out
-		SRAM_CE_N   : out std_logic; -- chip select
-		SRAM_OE_N   : out std_logic; -- output enable
-		SRAM_WE_N   : out std_logic; -- write enable
-		SRAM_UB_N   : out std_logic; -- upper byte mask
-		SRAM_LB_N   : out std_logic; -- lower byte mask
-
-
+		-------------------sram-----------------------------
+		SRAM_ADDR : out std_logic_vector(19 downto 0); -- address out
+		SRAM_DQ : inout std_logic_vector(15 downto 0); -- data in/out
+		SRAM_CE_N : out std_logic; -- chip select
+		SRAM_OE_N : out std_logic; -- output enable
+		SRAM_WE_N : out std_logic; -- write enable
+		SRAM_UB_N : out std_logic; -- upper byte mask
+		SRAM_LB_N : out std_logic; -- lower byte mask
 		-------------------AUDIO-------------------------------
 
-			----------WM8731 pins-----
-			AUD_BCLK : out std_logic;
-			AUD_XCK : out std_logic;
-			AUD_ADCLRCK : out std_logic;
-			AUD_ADCDAT : in std_logic;
-			AUD_DACLRCK : out std_logic;
-			AUD_DACDAT : out std_logic;
-	
+		----------WM8731 pins-----
+		AUD_BCLK : out std_logic;
+		AUD_XCK : out std_logic;
+		AUD_ADCLRCK : out std_logic;
+		AUD_ADCDAT : in std_logic;
+		AUD_DACLRCK : out std_logic;
+		AUD_DACDAT : out std_logic;
 
-	
-			FPGA_I2C_SCLK : out std_logic;
-			FPGA_I2C_SDAT : inout std_logic
-
-
+		FPGA_I2C_SCLK : out std_logic;
+		FPGA_I2C_SDAT : inout std_logic
 	);
 end board_load;
 
@@ -85,10 +70,9 @@ architecture a1 of board_load is
 	constant screen_h : integer := 600;
 
 	signal vga_clk_inner : std_logic;
-
 	signal sram_clk_inner : std_logic;
 	signal audio_clk_inner : std_logic;
-	
+
 	-- sram
 	signal rd_inner : std_logic;
 	signal continue_inner : std_logic := '0';
@@ -101,157 +85,112 @@ architecture a1 of board_load is
 
 	signal error_o_inner : std_logic_vector(15 downto 0) := (others => NO);
 
-	--signal graphic_memory_inner : GraphicMemoryType;
+	
 
 	signal graphic_memory_data_inner : std_logic_vector (7 downto 0);
-	signal graphic_memory_write_address_inner : integer range 0 to 1300;
-	-- signal graphic_memory_we_inner : std_logic := '0';
 
 	signal sram_action_inner : SramStates := SRAM_OFF;
 
-	signal sram_data_in_inner   : std_logic_vector(15 downto 0);
-	signal sram_data_out_inner    :  std_logic_vector(15 downto 0); -- data out
-	signal sram_addres_write_inner			:  std_logic_vector(19 downto 0); -- address in
-	signal sram_addres_read_inner			:  std_logic_vector(19 downto 0); -- address in
+	signal sram_data_in_inner : std_logic_vector(15 downto 0);
+	signal sram_data_out_inner : std_logic_vector(15 downto 0); -- data out
+	signal sram_addres_write_inner : std_logic_vector(19 downto 0); -- address in
+	signal sram_addres_read_inner : std_logic_vector(19 downto 0); -- address in
 
 	signal load_progress_inner : integer := 0;
 
-	signal audio_play_explosion_1_inner :  std_logic;
-	signal audio_play_explosion_2_inner :  std_logic;
-	signal audio_play_fire_1_inner :  std_logic;
-	signal audio_play_fire_2_inner :  std_logic;
+	signal audio_play_explosion_1_inner : std_logic;
+	signal audio_play_explosion_2_inner : std_logic;
+	signal audio_play_fire_1_inner : std_logic;
+	signal audio_play_fire_2_inner : std_logic;
+
 	
-
-	--signal disp_ena_test : std_logic := '0';
-
-	--constant clk_vga_period : time := 5 ns;
-
 	--------------------------------
-	type LCD_Data_t is record
-		Data : std_logic_vector(7 downto 0);
-		IsCommand : std_logic;
-	end record;
 
-	type RAM_t is array(0 to 13) of LCD_Data_t;
-	type State_t is (LCD_Reset, LCD_WaitDisplay, LCD_Send, LCD_Finish);
-
-	signal CurrentState : State_t := LCD_Reset;
-
-	-- Create a small RAM with some data for the LCD.
-	signal RAM : RAM_t := ((x"48", '0'), (x"65", '0'), (x"6C", '0'), (x"6C", '0'), (x"6F", '0'),
-	(x"2C", '0'), (x"20", '0'), (x"57", '0'), (x"6F", '0'), (x"72", '0'),
-	(x"6C", '0'), (x"64", '0'), (x"21", '0'), (x"02", '1'));
-
-	signal LCD_Data_inner : std_logic_vector(7 downto 0);
-	signal LCD_Address : UNSIGNED(6 downto 0) := "0000010";
-	signal LCD_Ready : std_logic;
-	signal LCD_Valid : std_logic := '0';
-	signal LCD_SendCommand : std_logic := '0';
-	signal LCD_AddressSet : std_logic := '0';
-
-	component LCD_Controller is
-		generic (
-			CLOCK_FREQ : integer := 125
-		);
+	component sram is
 		port (
-			Clock : in std_logic;
-			nReset : in std_logic;
+			CLOCK : in std_logic; -- clock in
+			RESET_N : in std_logic; -- reset async
 
-			Data : in std_logic_vector(7 downto 0) := (others => '0');
+			DATA_IN : in std_logic_vector(15 downto 0); -- data in
+			DATA_OUT : out std_logic_vector(15 downto 0); -- data out
+			ADDR_READ : in std_logic_vector(19 downto 0); -- address in
+			ADDR_WRITE : in std_logic_vector(19 downto 0); -- address in
 
-			Ready : out std_logic;
-			Valid : in std_logic;
+			ACTION : in SramStates; -- operation to perform
 
-			SendCommand : in std_logic;
+			SRAM_ADDR : out std_logic_vector(19 downto 0); -- address out
+			SRAM_DQ : inout std_logic_vector(15 downto 0); -- data in/out
+			SRAM_CE_N : out std_logic; -- chip select
+			SRAM_OE_N : out std_logic; -- output enable
+			SRAM_WE_N : out std_logic; -- write enable
+			SRAM_UB_N : out std_logic; -- upper byte mask
+			SRAM_LB_N : out std_logic -- lower byte mask
 
-			LCD_RS : out std_logic;
-			LCD_E : out std_logic;
-			LCD_RW : out std_logic;
-			LCD_Data : inout std_logic_vector(7 downto 0)
 		);
 	end component;
-	--------------------------------
-
-	component sram is 
-	port (
-		CLOCK 		: in std_logic; -- clock in
-		RESET_N		: in std_logic; -- reset async
-		
-		DATA_IN     : in std_logic_vector(15 downto 0); -- data in
-		DATA_OUT    : out std_logic_vector(15 downto 0); -- data out
-		ADDR_READ			: in std_logic_vector(19 downto 0); -- address in
-		ADDR_WRITE			: in std_logic_vector(19 downto 0); -- address in
-		
-		ACTION		: in SramStates; -- operation to perform
-		
-		SRAM_ADDR	: out std_logic_vector(19 downto 0); -- address out
-		SRAM_DQ     : inout std_logic_vector(15 downto 0); -- data in/out
-		SRAM_CE_N   : out std_logic; -- chip select
-		SRAM_OE_N   : out std_logic; -- output enable
-		SRAM_WE_N   : out std_logic; -- write enable
-		SRAM_UB_N   : out std_logic; -- upper byte mask
-		SRAM_LB_N   : out std_logic; -- lower byte mask
-		
-		LED : out std_logic_vector(7 downto 0)
-	);
-	end component;
-
 
 	component main is
-		generic (
-			game_speed : integer;
-			screen_w : integer;
-			screen_h : integer
-		);
-		port (
-			-- input
-			pixel_clk : in std_logic;
-			game_clk : in std_logic;
-	
-			reset : in std_logic;
-	
-			up_1 : in std_logic;
-			down_1 : in std_logic;
-			fire_1 : in std_logic;
-	
-			up_2 : in std_logic;
-			down_2 : in std_logic;
-			fire_2 : in std_logic;
+	generic (
+		game_speed : integer := 1000;
+		-- screen size
+		screen_w : integer;
+		screen_h : integer
+	);
+	port (
+		-- INPUT
+		-- clocks
+		pixel_clk : in std_logic;
+		game_clk : in std_logic;
 
-			start_game : in std_logic;
-			stop_game : in std_logic;
-	
-			--graphic_memory : in GraphicMemoryType;
-	
-			data : in std_logic_vector (15 downto 0);
-			
-			-- we : in std_logic;
+		-- video reset
+		reset : in std_logic;
 
-			load_progress : in integer;
-	
-			-- output
-			red : out std_logic_vector(7 downto 0); --red magnitude output to DAC
-			green : out std_logic_vector(7 downto 0); --green magnitude output to DAC
-			blue : out std_logic_vector(7 downto 0);
-	
-			n_blank : out std_logic; --direct blacking output to DAC
-			n_sync : out std_logic;
-			h_sync : out std_logic; --horiztonal sync pulse
-			v_sync : out std_logic; --vertical sync pulse
-	
-			-- for testing
-			disp_ena : out std_logic;
-	
-			sram_addres_read	: out std_logic_vector(19 downto 0);
-			LED : out std_logic_vector(7 downto 0);
+		-- control player 1
+		up_1 : in std_logic;
+		down_1 : in std_logic;
+		fire_1 : in std_logic;
 
-			audio_play_explosion_1 : out std_logic;
-			audio_play_explosion_2 : out std_logic;
-			audio_play_fire_1 : out std_logic;
-			audio_play_fire_2 : out std_logic
-		);
+		-- control player 2
+		up_2 : in std_logic;
+		down_2 : in std_logic;
+		fire_2 : in std_logic;
+
+		-- state control
+		start_game : in std_logic;
+		stop_game : in std_logic;
+
+		-- sram data
+		data : in std_logic_vector (15 downto 0);
+
+		load_progress : in integer;
+
+		-- OUTPUT
+		--red magnitude output to DAC
+		red : out std_logic_vector(7 downto 0); 
+		--green magnitude output to DAC
+		green : out std_logic_vector(7 downto 0); 
+		--blue magnitude output to DAC
+		blue : out std_logic_vector(7 downto 0);
+
+		--direct blacking output to DAC
+		n_blank : out std_logic; 
+		--sync-on-green output to DAC
+		n_sync : out std_logic;
+		--horiztonal sync pulse
+		h_sync : out std_logic; 
+		--vertical sync pulse
+		v_sync : out std_logic; 
+
+		-- sram memory index for reading
+		sram_addres_read : out std_logic_vector(19 downto 0);
+
+		-- signals for audio triger
+		audio_play_explosion_1 : out std_logic;
+		audio_play_explosion_2 : out std_logic;
+		audio_play_fire_1 : out std_logic;
+		audio_play_fire_2 : out std_logic
+	);
 	end component;
-
 
 	component audio_codec is
 		port (
@@ -262,29 +201,24 @@ architecture a1 of board_load is
 			AUD_ADCDAT : in std_logic;
 			AUD_DACLRCK : out std_logic;
 			AUD_DACDAT : out std_logic;
-	
+
 			---------FPGA pins-----
-	
+
 			clock_12pll : in std_logic;
 			clock_50 : in std_logic;
 			reset : in std_logic;
-	
-	
-	
-	
 			FPGA_I2C_SCLK : out std_logic;
 			FPGA_I2C_SDAT : inout std_logic;
-	
-	
 			audio_play_fire_1 : in std_logic;
 			audio_play_fire_2 : in std_logic;
 			audio_play_explosion_1 : in std_logic;
 			audio_play_explosion_2 : in std_logic
 
 		);
-	
+
 	end component;
 
+	-- clock convertor
 	component altpll0 is
 		port (
 			inclk0 : in std_logic := '0';
@@ -320,9 +254,9 @@ architecture a1 of board_load is
 			cs_bo : out std_logic := HI; -- Active-low chip-select.
 			sclk_o : out std_logic := LO; -- Serial clock to SD card.
 			mosi_o : out std_logic := HI; -- Serial data output to SD card.
-			miso_i : in std_logic := ZERO; -- Serial data input from SD card.
+			miso_i : in std_logic := ZERO -- Serial data input from SD card.
 
-			LED_card_control : out std_logic_vector(7 downto 0)
+
 		);
 	end component;
 
@@ -352,7 +286,6 @@ begin
 		stop_game => not fire_2,
 
 		data => sram_data_out_inner,
-		-- we => graphic_memory_we_inner,
 
 		load_progress => load_progress_inner,
 
@@ -367,8 +300,6 @@ begin
 		v_sync => v_sync, --vertical sync pulse
 
 		sram_addres_read => sram_addres_read_inner,
-
-		LED => LED,
 
 		audio_play_explosion_1 => audio_play_explosion_1_inner,
 		audio_play_explosion_2 => audio_play_explosion_2_inner,
@@ -385,37 +316,29 @@ begin
 
 	);
 
-	audio: audio_codec 
-		port map(
-			----------WM8731 pins-----
-			AUD_BCLK => AUD_BCLK,
-			AUD_XCK => AUD_XCK,
-			AUD_ADCLRCK => AUD_ADCLRCK,
-			AUD_ADCDAT => AUD_ADCDAT,
-			AUD_DACLRCK => AUD_DACLRCK,
-			AUD_DACDAT =>AUD_DACDAT,
-	
-			---------FPGA pins-----
-	
-			clock_12pll => audio_clk_inner,
-			clock_50 => game_clk,
-			reset => '0',
-	
-	
-	
-	
-			FPGA_I2C_SCLK => FPGA_I2C_SCLK,
-			FPGA_I2C_SDAT => FPGA_I2C_SDAT,
-	
-	
-			audio_play_explosion_1 => audio_play_explosion_1_inner,
-			audio_play_explosion_2 => audio_play_explosion_2_inner,
-			audio_play_fire_1 => audio_play_fire_1_inner,
-			audio_play_fire_2 => audio_play_fire_2_inner
-	
-		);
-	
+	audio : audio_codec
+	port map(
+		----------WM8731 pins-----
+		AUD_BCLK => AUD_BCLK,
+		AUD_XCK => AUD_XCK,
+		AUD_ADCLRCK => AUD_ADCLRCK,
+		AUD_ADCDAT => AUD_ADCDAT,
+		AUD_DACLRCK => AUD_DACLRCK,
+		AUD_DACDAT => AUD_DACDAT,
 
+		---------FPGA pins-----
+
+		clock_12pll => audio_clk_inner,
+		clock_50 => game_clk,
+		reset => '0',
+		FPGA_I2C_SCLK => FPGA_I2C_SCLK,
+		FPGA_I2C_SDAT => FPGA_I2C_SDAT,
+		audio_play_explosion_1 => audio_play_explosion_1_inner,
+		audio_play_explosion_2 => audio_play_explosion_2_inner,
+		audio_play_fire_1 => audio_play_fire_1_inner,
+		audio_play_fire_2 => audio_play_fire_2_inner
+
+	);
 
 	sd_card : SdCardCtrl
 	generic map(
@@ -427,14 +350,11 @@ begin
 	)
 	port map(
 		-- Host-side interface signals.
-		-- TODO pass here normal 50 MHz clock
 		clk_i => game_clk,
 		reset_i => reset_inner,
 		rd_i => rd_inner,
-		--wr_i => '0',
 		continue_i => continue_inner,
 		addr_i => addr_inner,
-		--data_i : in std_logic_vector(7 downto 0) := x"00"; -- Data to write to block.
 		data_o => graphic_memory_data_inner,
 		busy_o => busy_o_inner,
 		hndShk_i => hndShk_i_inner,
@@ -444,122 +364,44 @@ begin
 		cs_bo => cs_bo,
 		sclk_o => sclk_o,
 		mosi_o => mosi_o,
-		miso_i => miso_i,
+		miso_i => miso_i
 
-		LED_card_control => LED_card_control
 	);
 
 	pixel_clk <= vga_clk_inner;
 
 	----------------------------------------------
 
-graphic_sram : sram
+	graphic_sram : sram
 	port map(
-		CLOCK 		=> sram_clk_inner, -- clock in
-		RESET_N		=> '0',
-		
-		DATA_IN     =>  sram_data_in_inner,-- data in
-		DATA_OUT   => sram_data_out_inner, -- data out
-		ADDR_READ	=> sram_addres_read_inner,
-		ADDR_WRITE		=> sram_addres_write_inner,
-		
-		ACTION		=> sram_action_inner, -- operation to perform
-		
+		CLOCK => sram_clk_inner, -- clock in
+		RESET_N => '0',
+
+		DATA_IN => sram_data_in_inner, -- data in
+		DATA_OUT => sram_data_out_inner, -- data out
+		ADDR_READ => sram_addres_read_inner,
+		ADDR_WRITE => sram_addres_write_inner,
+
+		ACTION => sram_action_inner, -- operation to perform
+
 		SRAM_ADDR => SRAM_ADDR, -- address out
-		SRAM_DQ    => SRAM_DQ, -- data in/out
-		SRAM_CE_N  => SRAM_CE_N, -- chip select
-		SRAM_OE_N   => SRAM_OE_N, -- output enable
-		SRAM_WE_N   => SRAM_WE_N, -- write enable
-		SRAM_UB_N  => SRAM_UB_N, -- upper byte mask
-		SRAM_LB_N  => SRAM_LB_N -- lower byte mask
+		SRAM_DQ => SRAM_DQ, -- data in/out
+		SRAM_CE_N => SRAM_CE_N, -- chip select
+		SRAM_OE_N => SRAM_OE_N, -- output enable
+		SRAM_WE_N => SRAM_WE_N, -- write enable
+		SRAM_UB_N => SRAM_UB_N, -- upper byte mask
+		SRAM_LB_N => SRAM_LB_N -- lower byte mask
 		
-		--LED => LED
 	);
 
-
-	LCD : LCD_Controller
-	-- generic map(
-	-- 	CLOCK_FREQ => 125
-	-- )
-	port map(
-		Clock => game_clk,
-		nReset => '1',
-		Data => LCD_Data_inner,
-		Ready => LCD_Ready,
-		Valid => LCD_Valid,
-		SendCommand => LCD_SendCommand,
-		LCD_RS => LCD_RS,
-		LCD_E => LCD_E,
-		LCD_RW => LCD_RW,
-		LCD_Data => LCD_Data
-	);
-
-	process (game_clk, reset)
-		variable Index : integer := 0;
-		variable speed : integer := 0;
-	begin
-		-- if (reset_inner = '1') then
-		-- 	CurrentState <= LCD_Reset;
-		-- els
-		if (rising_edge(game_clk)) then
-			if (speed < 50_000_000) then
-				speed := speed + 1;
-			else
-				speed := 0;
-				case CurrentState is
-
-					when LCD_Reset =>
-						LCD_Valid <= '0';
-						LCD_Data_inner <= (others => '0');
-						CurrentState <= LCD_WaitDisplay;
-
-					when LCD_WaitDisplay =>
-						LCD_Valid <= '0';
-
-						if (LCD_Ready = '1') then
-							if (LCD_AddressSet = '0') then
-								LCD_AddressSet <= '1';
-								LCD_SendCommand <= '1';
-								LCD_Data_inner <= '1' & std_logic_vector(LCD_Address);
-							else
-								LCD_SendCommand <= RAM(Index).IsCommand;
-								LCD_Data_inner <= RAM(Index).Data;
-								Index := Index + 1;
-							end if;
-
-							LCD_Valid <= '1';
-							CurrentState <= LCD_Send;
-						else
-							CurrentState <= LCD_WaitDisplay;
-						end if;
-
-					when LCD_Send =>
-						if (LCD_Ready <= '0') then
-							if (Index < RAM'length) then
-								CurrentState <= LCD_WaitDisplay;
-							else
-								CurrentState <= LCD_Finish;
-							end if;
-						else
-							CurrentState <= LCD_Send;
-						end if;
-
-					when LCD_Finish =>
-						LCD_Valid <= '0';
-
-				end case;
-			end if;
-		end if;
-	end process;
-
-	--LED(0) <= busy_o_inner;
-
-	--LED <= std_logic_vector(to_unsigned(card_states'pos(state) + 1, 4));
 
 	---------------------------------------------------------------------------
 
+
+	-- read from SD card
 	process (game_clk)
-		type card_states is (-- States of the SD card.
+		-- states of the SD card
+		type card_states is (
 			RESET,
 			WAIT_FOR_RESET_STARTS,
 			END_OF_RESET,
@@ -573,22 +415,24 @@ graphic_sram : sram
 		);
 		variable state : card_states := RESET;
 		variable data_addres : integer := 0;
+
+		-- delay between reads to slow down loading
 		variable wait_1 : integer := 1000;
 
+		-- sram writes 2 bytes, but we read 1 byte from SD card
+		-- so we need to do it sequentially
 		variable write_byte_index : std_logic := '1';
-		variable sram_data_var   : std_logic_vector(15 downto 0);
+		variable sram_data_var : std_logic_vector(15 downto 0);
 	begin
 		if (rising_edge(game_clk)) then
 			if (wait_1 > 0) then
 				wait_1 := wait_1 - 1;
 			else
-				--wait_1 := 25_000_000;
-				 wait_1 := 0;
+				wait_1 := 1000;
 				-- initialization
 				if (state = RESET) then
 					reset_inner <= '1';
 					state := WAIT_FOR_RESET_STARTS;
-					wait_1 := 1000;
 				elsif (state = WAIT_FOR_RESET_STARTS) then
 					reset_inner <= '0';
 					if (busy_o_inner = '1') then
@@ -596,10 +440,10 @@ graphic_sram : sram
 
 					end if;
 
-					-- read data
+				-- read data
 				elsif (state = END_OF_RESET) then
-
 					if (busy_o_inner = '0') then
+						-- if no error occurred start read
 						if (error_o_inner = x"0000") then
 							state := START_READ;
 						else
@@ -607,14 +451,11 @@ graphic_sram : sram
 						end if;
 					end if;
 				elsif (state = START_READ) then
-					
 					rd_inner <= '1';
 					addr_inner <= x"00000000";
 					state := WAIT_FOR_READ_STARTS;
 				elsif (state = WAIT_FOR_READ_STARTS) then
 					if (busy_o_inner = '1') then
-						-- rd_inner <= '0';
-						--addr_inner <= x"00000000";
 						continue_inner <= '1';
 						state := WAIT_FOR_HNDSHK_UP;
 					end if;
@@ -625,18 +466,19 @@ graphic_sram : sram
 
 					else
 						if (hndShk_o_inner = '1') then
+							-- read in variable first part of data
 							if (write_byte_index = '1') then
-								--graphic_memory_write_address_inner <= data_addres;
-								--graphic_memory_we_inner <= '1';
-								-- graphic_memory_data_inner <= data_o_inner;
+								-- sram is off
 								sram_action_inner <= SRAM_OFF;
-								sram_data_var(15 downto 8) := graphic_memory_data_inner; 
+								sram_data_var(15 downto 8) := graphic_memory_data_inner;
+							-- read and send second part of data
 							else
-								sram_addres_write_inner	<= std_logic_vector(to_unsigned(data_addres, 20));
+								sram_addres_write_inner <= std_logic_vector(to_unsigned(data_addres, 20));
 								sram_data_var(7 downto 0) := graphic_memory_data_inner;
 								sram_action_inner <= SRAM_WRITE;
 								sram_data_in_inner <= sram_data_var;
 
+								-- if all data are readed - stop reading
 								-- total bytes 351 520/2=175 760
 								if (data_addres > 175760) then
 									continue_inner <= '0';
@@ -644,8 +486,10 @@ graphic_sram : sram
 								end if;
 
 								data_addres := data_addres + 1;
+								-- send load progress
 								load_progress_inner <= data_addres;
 							end if;
+
 							write_byte_index := not write_byte_index;
 
 							hndShk_i_inner <= '1';
@@ -657,17 +501,11 @@ graphic_sram : sram
 						hndShk_i_inner <= '0';
 						state := WAIT_FOR_HNDSHK_UP;
 					end if;
+				-- stop writing. start reading process from sram
 				elsif (state = READ_END) then
-					-- graphic_memory_we_inner <= '0';
 					sram_action_inner <= SRAM_READ;
-					-- END
 				end if;
 			end if;
 		end if;
-
-		-- LED <= std_logic_vector(to_unsigned(card_states'pos(state) + 1, 8));
-		-- LED <= graphic_memory_data_inner;
 	end process;
-
-	--LED <= graphic_memory_data_inner;
 end a1;

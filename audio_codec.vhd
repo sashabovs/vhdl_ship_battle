@@ -39,7 +39,6 @@ architecture main of audio_codec is
 	signal read_addr : integer range 0 to 240254 := 0;
 	signal ROM_ADDR : std_logic_vector(17 downto 0);
 	signal ROM_OUT : std_logic_vector(15 downto 0) := x"BBFF";
-	-- signal clock_12pll : std_logic;
 	signal WM_i2c_busy : std_logic;
 	signal WM_i2c_done : std_logic;
 	signal WM_i2c_send_flag : std_logic;
@@ -49,6 +48,8 @@ architecture main of audio_codec is
 	signal temp_out_explosion_1 : signed(15 downto 0);
 	signal temp_out_fire_2 : signed(15 downto 0);
 	signal temp_out_explosion_2 : signed(15 downto 0);
+
+
 	component aud_gen is
 		port (
 			aud_clock_12 : in std_logic;
@@ -72,8 +73,6 @@ architecture main of audio_codec is
 		);
 
 	end component i2c;
-
-
 begin
 
 	sound : component aud_gen
@@ -92,6 +91,7 @@ begin
 				i2c_scl => FPGA_I2C_SCLK,
 				i2c_send_flag => WM_i2c_send_flag,
 				i2c_sda => FPGA_I2C_SDAT,
+				-- addres of audio codec on i2c bus x"34"
 				i2c_addr => "00110100",
 				i2c_done => WM_i2c_done,
 				i2c_data => WM_i2c_data,
@@ -100,35 +100,26 @@ begin
 			AUD_XCK <= clock_12pll;
 			AUD_DACLRCK <= DA_CLR;
 
+			-- set data for aud_gen
 			process (clock_12pll)
 			begin
-
 				if rising_edge(clock_12pll) then
 
 					if (reset = '1') then--------reset
-						--read_addr<=0;
-						--bitprsc<=0;
 						aud_mono <= (others => '0');
 					else
-						aud_mono(15 downto 0) <= std_logic_vector(temp_out_fire_1/2 + temp_out_explosion_1/2);----mono sound
+						----left mono chanel
+						-- we combime fire and explosion sounds. We devide by 2 to avoid overflow
+						aud_mono(15 downto 0) <= std_logic_vector(temp_out_fire_1/2 + temp_out_explosion_1/2);
+						----right mono chanel
 						aud_mono(31 downto 16) <= std_logic_vector(temp_out_fire_2/2 + temp_out_explosion_2/2);
 					end if;
 				end if;
 			end process;
 
-			process (clock_50)
-				-- variable sleep : integer := 1000;
-				-- variable sleep_to_next : integer := 55_000_000;
 
-				-- variable sleep_sec : integer := 50_000;
-				-- variable sleep_cur : integer := sleep;
-				-- variable v_tstep : integer := 0;
-				-- variable quarter_num : std_logic := '0';
-				-- variable quarter_sign : integer := 1;
-				-- variable stage : integer := 0;
 
-				-- variable ampl_mult : integer := 1;
-				-- variable ampl_div : integer := 1;
+			playFireSoundProcess : process (clock_50)
 
 				variable soundData_1 : AudioTypeForFire := (sleep => 100, sleep_sec => 50_000, sleep_cur => 100, v_tstep => 128, quarter_num => '0', quarter_sign => 1, temp_out => (others => '0'), finished => '1');
 				variable soundData_2 : AudioTypeForFire := (sleep => 100, sleep_sec => 50_000, sleep_cur => 100, v_tstep => 128, quarter_num => '0', quarter_sign => 1, temp_out => (others => '0'), finished => '1');
@@ -157,20 +148,7 @@ begin
 				end if;
 			end process;
 
-			process (clock_50)
-
-				-- variable sleep : integer := 1000;
-				-- variable sleep_to_next : integer := 50_000_000;
-				-- variable sleep_sec : integer := 50_000;
-				-- variable sleep_cur : integer := sleep;
-				-- variable v_tstep : integer := 0;
-				-- variable quarter_num : std_logic := '0';
-				-- variable quarter_sign : integer := 1;
-				-- variable stage : integer := 0;
-
-				-- variable ampl_mult : integer := 1;
-				-- variable ampl_div : integer := 1;
-
+			playExplosionSoundProcess : process (clock_50)
 				variable soundData_1 : AudioTypeForExplosion := (sleep => 100, sleep_sec => 50_000, sleep_cur => 100, v_tstep => 128, quarter_num => '0', quarter_sign => 1, stage => 0, ampl_mult => 0, ampl_div => 1, temp_out => (others => '0'), finished => '1');
 				variable soundData_2 : AudioTypeForExplosion := (sleep => 100, sleep_sec => 50_000, sleep_cur => 100, v_tstep => 128, quarter_num => '0', quarter_sign => 1, stage => 0, ampl_mult => 0, ampl_div => 1, temp_out => (others => '0'), finished => '1');
 			begin
@@ -198,6 +176,9 @@ begin
 				end if;
 			end process;
 
+
+
+			-- configuring codec
 			process (clock_50)
 				type states is (RESET, ACTIVE_INTERFACE, POWER_ON, SET_DIGITAL_INTERFACE, HEADPFONE_VOLUME, USB_MODE, ENABLE_DAC_TO_LINEOUT, UNMUTE_DAC, FINISH);
 				variable stage : states := RESET;
@@ -221,6 +202,7 @@ begin
 						sleep := sleep - 1;
 					end if;
 
+					-- configuring the codec
 					if (sleep = 0 and is_command_transfer_finished = '1') then
 						is_command_transfer_finished := '0';
 						sleep := 500_000;

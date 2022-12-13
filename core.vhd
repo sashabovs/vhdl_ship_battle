@@ -6,27 +6,32 @@ use ieee.std_logic_1164.all;
 entity core is
 	generic (
 		game_speed : integer;
+		-- screen size
 		screen_w : integer := 100;
 		screen_h : integer := 100
-
-		-- ship_1_image_width : integer;
-		-- ship_1_image_height : integer
 	);
 	port (
-		-- input
-		-- pixel_clk : in std_logic;
+		-- INPUT
+		-- clock
 		clk : in std_logic;
+
+		-- cannon control signals
 		cannon_1_up : in std_logic;
 		cannon_1_down : in std_logic;
 		cannon_1_fire : in std_logic;
 		cannon_2_up : in std_logic;
 		cannon_2_down : in std_logic;
 		cannon_2_fire : in std_logic;
+
+		-- resets signal
 		core_reset : in std_logic;
 		queue_reset : in std_logic;
+
+		-- signal for starting of initialization
 		start_init : in std_logic;
 
-		-- output
+		-- OUTPUT
+		-- signals for drawing
 		cannon_1_pos_out : out Coordinates;
 		cannon_2_pos_out : out Coordinates;
 		shells_1_out : out ArrayOfShells;
@@ -34,13 +39,15 @@ entity core is
 		ships_1_out : out ShipArray;
 		ships_2_out : out ShipArray;
 
+		-- score value for drawing
 		score_1 : out integer;
 		score_2 : out integer;
 
+		-- points of border of playing area
 		first_border_coord : out Coordinates;
 		second_border_coord : out Coordinates;
 
-
+		-- signals for audio triger
 		audio_play_explosion_1 : out std_logic;
 		audio_play_explosion_2 : out std_logic;
 		audio_play_fire_1 : out std_logic;
@@ -50,88 +57,116 @@ end core;
 
 architecture a1 of core is
 	component cannon is
-		generic (
-			speed : integer;
-			start_pos_x : integer;
-			start_pos_y : integer;
+	generic (
+		-- cannon move speed
+		speed : integer;
 
-			screen_top : integer;
-			screen_bottom : integer
-		);
-		port (
-			-- input
-			clk : in std_logic;
-			up : in std_logic;
-			down : in std_logic;
+		-- cannon start position
+		start_pos_x : integer;
+		start_pos_y : integer;
 
-			core_reset : in std_logic;
+		-- screen working area borders
+		screen_top : integer;
+		screen_bottom : integer
+	);
+	port (
+		-- INPUT
+		--clock
+		clk : in std_logic;
 
-			-- output
-			coords_out : out Coordinates
-		);
+		-- move signals
+		up : in std_logic;
+		down : in std_logic;
+
+		-- synchronous reset
+		core_reset : in std_logic;
+
+		-- OUTPUT
+		-- current position of the cannon
+		coords_out : out Coordinates
+	);
 	end component;
 
 	component queue is
 		generic (
-			--depth of fifo
+			--size of fifo
 			depth : integer;
+			-- speed of shells
 			update_period_in_clk : integer;
+			-- shells flight direction (1 - left_to_right, -1 - right_to_left)
 			direction : integer
 		);
 		port (
-			-- input
+			-- INPUT
+			--clock
 			clk : in std_logic;
-
-			pop_enabled : in std_logic; --enable read,should be '0' when not in use.
-			push_enabled : in std_logic; --enable write,should be '0' when not in use.
-			data_in : in Coordinates; --input data
-
+			--reset
 			queue_reset : in std_logic;
-			-- output
-			--data_out : out Coordinates; --output data
+			--enable read
+			pop_enabled : in std_logic;
+			--enable write
+			push_enabled : in std_logic;
+			--input data
+			data_in : in Coordinates;
+	
+			-- OUTPUT
+			-- top element
 			data_top : out Coordinates;
-
+			-- all elements
 			data_all : out ArrayOfShells
 		);
 	end component;
 
 	component ships is
 		generic (
-			--depth of fifo
-			size : integer := 10;
+			-- depth of fifo
+			size : integer := 5;
+			-- speed of ships
 			update_period_in_clk : integer := 20;
+			-- screen parameters
 			screen_w : integer;
 			screen_h : integer;
+	
+			-- position of ships (0 - left side, 1 - right side)
 			reverse : integer
 		);
 		port (
-			-- input
+			-- INPUT
+			-- clock
 			clk : in std_logic;
+			-- reset 
 			core_reset : in std_logic;
+			-- start of ship initialization
 			start_init : in std_logic;
+			-- index of ship to delete
 			ship_to_delete : in integer;
-			-- output
+	
+			-- OUTPUT
+			-- all elements
 			ships_all : out ShipArray
 		);
 	end component;
-	--signal cannon_1_pos_inner : Coordinates;
+
+
 	signal cannon_1_fire_inner : std_logic := '0';
 	signal cannon_2_fire_inner : std_logic := '0';
+	
 	signal shells_1_remove_top : std_logic := '0';
 	signal shells_2_remove_top : std_logic := '0';
 
-	signal first_border_coord_inner : Coordinates := (x => screen_w/20, y => screen_h/12);
-	signal second_border_coord_inner : Coordinates := (x => screen_w/20 * 19, y => screen_h/12 * 11);
+	-- playing area borders
+	constant first_border_coord_inner : Coordinates := (x => screen_w/20, y => screen_h/12);
+	constant second_border_coord_inner : Coordinates := (x => screen_w/20 * 19, y => screen_h/12 * 11);
 
+	-- inner signals for transfer
 	signal cannon_1_pos_inner : Coordinates := (x => 0, y => 0);
 	signal cannon_2_pos_inner : Coordinates := (x => 0, y => 0);
-	--signal data_out_inner : Coordinates;
 	signal shells_1_top_inner : Coordinates;
 	signal shells_2_top_inner : Coordinates;
-	--signal ships_1_inner : ShipArray := (others => (pos1 => (x => - 100, y => - 100), ship_type => (color => "000000000000001111111111", value => - 2, ship_image_width => 20, ship_image_height => 65)));
-	--signal ships_2_inner : ShipArray := (others => (pos1 => (x => - 100, y => - 100), ship_type => (color => "000000000000001111111111", value => - 2, ship_image_width => 20, ship_image_height => 65)));
 	signal ships_1_inner : ShipArray := (others => (pos1 => (x => - 100, y => - 100), ship_type => destroyer));
 	signal ships_2_inner : ShipArray := (others => (pos1 => (x => - 100, y => - 100), ship_type => destroyer));
+
+	
 	signal ship_to_delete_1_inner : integer := 9999;
 	signal ship_to_delete_2_inner : integer := 9999;
 begin
@@ -183,17 +218,13 @@ begin
 	port map(
 		-- input
 		clk => clk,
-		--clk => pixel_clk,
-
 		queue_reset => queue_reset,
-		pop_enabled => shells_1_remove_top, --enable read,should be '0' when not in use.
-		push_enabled => cannon_1_fire_inner, --enable write,should be '0' when not in use.
-		data_in => cannon_1_pos_inner, --input data
+		pop_enabled => shells_1_remove_top, 
+		push_enabled => cannon_1_fire_inner, 
+		data_in => cannon_1_pos_inner, 
 
 		-- output
-		--data_out => data_out_inner, --output data
 		data_top => shells_1_top_inner,
-
 		data_all => shells_1_out
 	);
 
@@ -206,17 +237,13 @@ begin
 	port map(
 		-- input
 		clk => clk,
-		--clk => pixel_clk,
-
 		queue_reset => queue_reset,
-		pop_enabled => shells_2_remove_top, --enable read,should be '0' when not in use.
-		push_enabled => cannon_2_fire_inner, --enable write,should be '0' when not in use.
-		data_in => cannon_2_pos_inner, --input data
+		pop_enabled => shells_2_remove_top, 
+		push_enabled => cannon_2_fire_inner, 
+		data_in => cannon_2_pos_inner, 
 
 		-- output
-		--data_out => data_out_inner, --output data
 		data_top => shells_2_top_inner,
-
 		data_all => shells_2_out
 	);
 
@@ -257,30 +284,35 @@ begin
 		ships_all => ships_2_inner
 	);
 
-	-- 1
+	-- 1 player --
+	-- fire
 	process (clk)
-		variable firePos : Coordinates;
+		-- fire rate
 		variable ticks_before_next_fire : integer := 10_000 * game_speed;
+		-- current ticks from last fire
 		variable ticks_from_last_fire : integer := ticks_before_next_fire;
 	begin
 		if (rising_edge(clk)) then
 			if (ticks_from_last_fire < ticks_before_next_fire) then
 				ticks_from_last_fire := ticks_from_last_fire + 1;
 			end if;
-
+			--all other time dont fire
 			cannon_1_fire_inner <= '0';
 
+			-- fire when the player wants and the player can
 			if (cannon_1_fire = '1' and ticks_from_last_fire = ticks_before_next_fire) then
 				ticks_from_last_fire := 0;
 
 				cannon_1_fire_inner <= '1';
-
 			end if;
 		end if;
 	end process;
 
+	-- score and colision logic
 	process (clk)
+		-- variable for delay of shell removal
 		variable ticks : integer := 0;
+		-- temporal score
 		variable score_tmp : integer := 0;
 	begin
 		if (rising_edge(clk)) then
@@ -294,6 +326,7 @@ begin
 				-- we need a delay because the Shell queue changes state not immideatly, but after 3 cycles
 				if (ticks = 5) then
 					ticks := 0;
+					-- remove shell when it flew out of the playing area
 					if (shells_1_top_inner.x > second_border_coord_inner.x) then
 						shells_1_remove_top <= '1';
 					end if;
@@ -301,9 +334,11 @@ begin
 					for i in 0 to 4 loop
 						if (shells_1_top_inner.x < (ships_1_inner(i).pos1.x + ships_1_inner(i).ship_type.ship_image_width)
 							and shells_1_top_inner.x > (ships_1_inner(i).pos1.x) and shells_1_top_inner.y < (ships_1_inner(i).pos1.y + ships_1_inner(i).ship_type.ship_image_height) and shells_1_top_inner.y > (ships_1_inner(i).pos1.y)) then
+							-- if hits, remove top shell and ship that was hitted, change score by value of ship
 							shells_1_remove_top <= '1';
 							ship_to_delete_1_inner <= i;
 							score_tmp := score_tmp + ships_1_inner(i).ship_type.value;
+							-- if score falls below 0, set it to 0
 							if (score_tmp < 0) then
 								score_tmp := 0;
 							end if;
@@ -314,30 +349,36 @@ begin
 			score_1 <= score_tmp;
 		end if;
 	end process;
-	-- 2
+
+	-- 2 player --
+	-- fire
 	process (clk)
-		variable firePos : Coordinates;
+		-- fire rate
 		variable ticks_before_next_fire : integer := 10_000 * game_speed;
+		-- current ticks from last fire
 		variable ticks_from_last_fire : integer := ticks_before_next_fire;
 	begin
 		if (rising_edge(clk)) then
 			if (ticks_from_last_fire < ticks_before_next_fire) then
 				ticks_from_last_fire := ticks_from_last_fire + 1;
 			end if;
-
+			--all other time dont fire
 			cannon_2_fire_inner <= '0';
 
+			-- fire when the player wants and the player can
 			if (cannon_2_fire = '1' and ticks_from_last_fire = ticks_before_next_fire) then
 				ticks_from_last_fire := 0;
 
 				cannon_2_fire_inner <= '1';
-
 			end if;
 		end if;
 	end process;
 
+	-- score and colision logic
 	process (clk)
+		-- variable for delay of shell removal
 		variable ticks : integer := 0;
+		-- temporal score
 		variable score_tmp : integer := 0;
 	begin
 		if (rising_edge(clk)) then
@@ -351,6 +392,7 @@ begin
 				-- we need a delay because the Shell queue changes state not immideatly, but after 3 cycles
 				if (ticks = 5) then
 					ticks := 0;
+					-- remove shell when it flew out of the playing area
 					if (shells_2_top_inner.x < first_border_coord_inner.x) then
 						shells_2_remove_top <= '1';
 					end if;
@@ -358,9 +400,11 @@ begin
 					for i in 0 to 4 loop
 						if (shells_2_top_inner.x < (ships_2_inner(i).pos1.x + ships_2_inner(i).ship_type.ship_image_width)
 							and shells_2_top_inner.x > (ships_2_inner(i).pos1.x) and shells_2_top_inner.y < (ships_2_inner(i).pos1.y + ships_2_inner(i).ship_type.ship_image_height) and shells_2_top_inner.y > (ships_2_inner(i).pos1.y)) then
+							-- if hits, remove top shell and ship that was hitted, change score by value of ship
 							shells_2_remove_top <= '1';
 							ship_to_delete_2_inner <= i;
 							score_tmp := score_tmp + ships_2_inner(i).ship_type.value;
+							-- if score falls below 0, set it to 0
 							if (score_tmp < 0) then
 								score_tmp := 0;
 							end if;
@@ -371,6 +415,9 @@ begin
 			score_2 <= score_tmp;
 		end if;
 	end process;
+
+
+	-- send inner signals to out signals
 	first_border_coord <= first_border_coord_inner;
 	second_border_coord <= second_border_coord_inner;
 

@@ -7,51 +7,59 @@ use ieee.std_logic_1164.all;
 entity main is
 	generic (
 		game_speed : integer := 1000;
-
+		-- screen size
 		screen_w : integer;
 		screen_h : integer
 	);
 	port (
-		-- input
+		-- INPUT
+		-- clocks
 		pixel_clk : in std_logic;
 		game_clk : in std_logic;
 
+		-- video reset
 		reset : in std_logic;
 
+		-- control player 1
 		up_1 : in std_logic;
 		down_1 : in std_logic;
 		fire_1 : in std_logic;
 
+		-- control player 2
 		up_2 : in std_logic;
 		down_2 : in std_logic;
 		fire_2 : in std_logic;
 
+		-- state control
 		start_game : in std_logic;
 		stop_game : in std_logic;
 
+		-- sram data
 		data : in std_logic_vector (15 downto 0);
-
-		-- we : in std_logic;
 
 		load_progress : in integer;
 
-		-- output
-		red : out std_logic_vector(7 downto 0); --red magnitude output to DAC
-		green : out std_logic_vector(7 downto 0); --green magnitude output to DAC
+		-- OUTPUT
+		--red magnitude output to DAC
+		red : out std_logic_vector(7 downto 0); 
+		--green magnitude output to DAC
+		green : out std_logic_vector(7 downto 0); 
+		--blue magnitude output to DAC
 		blue : out std_logic_vector(7 downto 0);
 
-		n_blank : out std_logic; --direct blacking output to DAC
+		--direct blacking output to DAC
+		n_blank : out std_logic; 
+		--sync-on-green output to DAC
 		n_sync : out std_logic;
-		h_sync : out std_logic; --horiztonal sync pulse
-		v_sync : out std_logic; --vertical sync pulse
+		--horiztonal sync pulse
+		h_sync : out std_logic; 
+		--vertical sync pulse
+		v_sync : out std_logic; 
 
-		-- for testing
-		disp_ena : out std_logic;
-
+		-- sram memory index for reading
 		sram_addres_read : out std_logic_vector(19 downto 0);
-		LED : out std_logic_vector(7 downto 0);
 
-
+		-- signals for audio triger
 		audio_play_explosion_1 : out std_logic;
 		audio_play_explosion_2 : out std_logic;
 		audio_play_fire_1 : out std_logic;
@@ -60,16 +68,15 @@ entity main is
 end main;
 
 architecture a1 of main is
+	-- transfer signals
+	signal disp_ena_inner : std_logic; 
+	signal column_inner : integer; 
+	signal row_inner : integer; 
 
-	
-
-
-	signal disp_ena_inner : std_logic; --display enable ('1' = display time, '0' = blanking time)
-	signal column_inner : integer; --horizontal pixel coordinate
-	signal row_inner : integer; --vertical pixel coordinate
-
+	-- reset for vga
 	signal reset_low : std_logic := '1';
 
+	-- transfer signals
 	signal cannon_pos_1_inner : Coordinates;
 	signal cannon_pos_2_inner : Coordinates;
 	signal shells_1_inner : ArrayOfShells;
@@ -77,28 +84,18 @@ architecture a1 of main is
 	signal ships_1_inner : ShipArray;
 	signal ships_2_inner : ShipArray;
 
-	signal up_inner : std_logic := '0';
-	signal down_inner : std_logic := '0';
-	signal fire_inner : std_logic := '0';
-
-	signal enr_test : std_logic := '0';
-	signal enw_test : std_logic := '0';
-	signal data_in_test : Coordinates;
-
-	signal data_out_test : Coordinates;
-	signal data_top_test : Coordinates;
-	signal enpt_test : std_logic := '0';
-	signal full_test : std_logic := '0';
-
 	signal score_1_inner : integer := 0;
 	signal score_2_inner : integer := 0;
 
 	signal first_border_coord_inner : Coordinates;
 	signal second_border_coord_inner : Coordinates;
 
+	-- in-game timer 
 	signal game_time_inner : integer := 0;
+	-- state
 	signal game_state_inner : GameStates;
 
+	-- signals for reset and re-initialization
 	signal core_reset_inner : std_logic := '0';
 	signal queue_reset_inner : std_logic := '0';
 	signal start_init_inner : std_logic := '0';
@@ -134,83 +131,105 @@ architecture a1 of main is
 
 	component hw_image_generator is
 		generic (
+			-- screen size
 			screen_w : integer;
 			screen_h : integer
 		);
 		port (
-			-- input
-			disp_ena : in std_logic; --display enable ('1' = display time, '0' = blanking time)
-			row : in integer; --row pixel coordinate
-			column : in integer; --column pixel coordinate
-
+			-- INPUT
+			-- clock
+			pixel_clk : in std_logic;
+			--display enable ('1' = display time, '0' = blanking time)
+			disp_ena : in std_logic; 
+			--row pixel coordinate
+			row : in integer; 
+			--column pixel coordinate
+			column : in integer; 
+	
+			-- play area borders
 			first_border_coord : in Coordinates;
 			second_border_coord : in Coordinates;
-
+	
+			-- elements to draw
 			cannon_1_pos : in Coordinates;
 			cannon_2_pos : in Coordinates;
 			shells_1 : in ArrayOfShells;
 			shells_2 : in ArrayOfShells;
 			ships_1 : in ShipArray;
 			ships_2 : in ShipArray;
-
+	
+			-- score
 			score_1 : in integer;
 			score_2 : in integer;
-
+	
+			-- antwort from sram (2 byte)
 			data : in std_logic_vector (15 downto 0);
-			game_clk : in std_logic;
-			pixel_clk : in std_logic;
-			-- we : in std_logic;
-
+			-- progress of loading of SDCard
 			load_progress : in integer;
-
-			game_time : integer;
-			game_state : GameStates;
-
-			-- output
+	
+			-- in-game timer
+			game_time : in integer;
+			-- state of the game
+			game_state : in GameStates;
+	
+			-- OUTPUT
+			-- sram addres 
 			sram_addres_read : out std_logic_vector(19 downto 0);
-
-			red : out std_logic_vector(7 downto 0) := (others => '0'); --red magnitude output to DAC
-			green : out std_logic_vector(7 downto 0) := (others => '0'); --green magnitude output to DAC
-			blue : out std_logic_vector(7 downto 0) := (others => '0'); --blue magnitude output to DAC
-
-			LED : out std_logic_vector(7 downto 0)
+	
+			--red magnitude output to DAC
+			red : out std_logic_vector(7 downto 0) := (others => '0'); 
+			--green magnitude output to DAC
+			green : out std_logic_vector(7 downto 0) := (others => '0'); 
+			--blue magnitude output to DAC
+			blue : out std_logic_vector(7 downto 0) := (others => '0') 
 		);
 	end component;
 
 	component core is
 		generic (
 			game_speed : integer;
-			screen_w : integer;
-			screen_h : integer
+			-- screen size
+			screen_w : integer := 100;
+			screen_h : integer := 100
 		);
 		port (
-			-- input
-			-- pixel_clk : in std_logic;
+			-- INPUT
+			-- clock
 			clk : in std_logic;
+	
+			-- cannon control signals
 			cannon_1_up : in std_logic;
 			cannon_1_down : in std_logic;
 			cannon_1_fire : in std_logic;
 			cannon_2_up : in std_logic;
 			cannon_2_down : in std_logic;
 			cannon_2_fire : in std_logic;
+	
+			-- resets signal
 			core_reset : in std_logic;
 			queue_reset : in std_logic;
+	
+			-- signal for starting of initialization
 			start_init : in std_logic;
-
-			-- output
+	
+			-- OUTPUT
+			-- signals for drawing
 			cannon_1_pos_out : out Coordinates;
 			cannon_2_pos_out : out Coordinates;
 			shells_1_out : out ArrayOfShells;
 			shells_2_out : out ArrayOfShells;
 			ships_1_out : out ShipArray;
 			ships_2_out : out ShipArray;
-
+	
+			-- score value for drawing
 			score_1 : out integer;
 			score_2 : out integer;
-
+	
+			-- points of border of playing area
 			first_border_coord : out Coordinates;
 			second_border_coord : out Coordinates;
-
+	
+			-- signals for audio triger
 			audio_play_explosion_1 : out std_logic;
 			audio_play_explosion_2 : out std_logic;
 			audio_play_fire_1 : out std_logic;
@@ -219,10 +238,12 @@ architecture a1 of main is
 	end component;
 
 begin
+	-- set reset
 	reset_low <= reset;
 
-	disp_ena <= disp_ena_inner;
-
+	
+	-- if-else generate only in vhdl-2008
+	-- generate object with exact parameters
 	gen_vga_controller : if (screen_w = 800) generate
 		vga_controller_1 : vga_controller
 		generic map(
@@ -259,12 +280,15 @@ begin
 	)
 	port map(
 		-- input
+		pixel_clk => pixel_clk,
+
 		disp_ena => disp_ena_inner,
 		row => row_inner,
 		column => column_inner,
 
 		first_border_coord => first_border_coord_inner,
 		second_border_coord => second_border_coord_inner,
+
 		cannon_1_pos => cannon_pos_1_inner,
 		cannon_2_pos => cannon_pos_2_inner,
 		shells_1 => shells_1_inner,
@@ -276,10 +300,7 @@ begin
 		score_2 => score_2_inner,
 
 		data => data,
-		game_clk => game_clk,
-		pixel_clk => pixel_clk,
-		-- we => we,
-
+	
 		load_progress => load_progress,
 
 		game_time => game_time_inner,
@@ -290,9 +311,7 @@ begin
 		green => green,
 		blue => blue,
 
-		sram_addres_read => sram_addres_read,
-
-		LED => LED
+		sram_addres_read => sram_addres_read
 	);
 
 	core_1 : core
@@ -302,7 +321,6 @@ begin
 		screen_h => screen_h
 	)
 	port map(
-		-- pixel_clk => pixel_clk,
 		clk => game_clk,
 		cannon_1_up => up_1,
 		cannon_1_down => down_1,
@@ -333,76 +351,93 @@ begin
 		audio_play_fire_2 => audio_play_fire_2
 	);
 
+
+	-- state control
 	process (game_clk)
 		variable game_state : GameStates := GAME_LOAD;
 
+		-- current in-game time
 		variable game_cur_time_sec : integer := 0;
-		variable game_time_sec : integer := 60;
+		-- max game time
+		constant game_time_sec : integer := 60;
+		-- 1 second for 50 MHz clock
 		variable ticks_in_sec : integer := 50_000_000;
+		-- increment "game_cur_time_sec" when ticks = ticks_in_sec
 		variable ticks : integer := 0;
-
+		-- variable to slow down the transition from state to state
 		variable sleep : integer := 0;
 	begin
 		if (rising_edge(game_clk)) then
-
+			-- reset off
 			core_reset_inner <= '0';
 			queue_reset_inner <= '0';
 
+			-- loading....
 			if (game_state = GAME_LOAD) then
 				if (load_progress >= 175760) then
 					game_state := GAME_START;
 
 				end if;
+			-- waiting for player input
 			elsif (game_state = GAME_START) then
-				game_cur_time_sec := game_time_sec;
 				if (start_game = '1') then
+					-- reset
 					core_reset_inner <= '1';
 					queue_reset_inner <= '1';
 
 					game_state := WAIT_FOR_GAME;
 					ticks := 0;
 				end if;
+			-- pre-game delay
 			elsif (game_state = WAIT_FOR_GAME) then
 				if (sleep > ticks_in_sec) then
+					-- initialize ships
 					start_init_inner <= '1';
+					-- set in-game timer
+					game_cur_time_sec := game_time_sec;
 
 					game_state := GAME_PLAY;
 					sleep := 0;
 				end if;
 				sleep := sleep + 1;
+			-- game
 			elsif (game_state = GAME_PLAY) then
-
-			
-
+				-- when time ends, end the game
 				if (game_cur_time_sec <= 0) then
 					game_state := GAME_END;
-
-
 				else
+					-- reduce the timer every second
 					ticks := ticks + 1;
 					if (ticks = ticks_in_sec) then
 						ticks := 0;
 						game_cur_time_sec := game_cur_time_sec - 1;
 					end if;
 				end if;
+			-- results
 			elsif (game_state = GAME_END) then
+				-- clear shell arrays
 				queue_reset_inner <= '1';
 
+				-- after game delay
 				if (sleep > ticks_in_sec) then
+					-- restart
 					if (start_game = '1') then
 						game_state := GAME_PLAY;
 						game_cur_time_sec := game_time_sec;
 						core_reset_inner <= '1';
 						sleep := 0;
+					-- back to main window
 					elsif (stop_game = '1') then
 						game_state := GAME_START;
 						core_reset_inner <= '1';
 						sleep := 0;
 					end if;
+				else 
+					sleep := sleep + 1;
 				end if;
-				sleep := sleep + 1;
 			end if;
 
+			-- set signals
 			game_time_inner <= game_cur_time_sec;
 			game_state_inner <= game_state;
 		end if;
